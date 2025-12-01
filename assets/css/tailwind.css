@@ -1,0 +1,593 @@
+/**
+ * Tailwind CSS - Modiva Application
+ * Main Tailwind source file with custom @layer directives
+ */
+/* ========================================
+   TAILWIND DIRECTIVES
+   ======================================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* ========================================
+   BASE LAYER - Custom Resets & Defaults
+   ======================================== */
+@layer base {
+  /* Box Sizing */
+  * {
+    @apply box-border;
+  }
+  /* HTML & Body */
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply font-sans bg-gray-50 text-gray-900 antialiased;
+    @apply m-0 p-0 max-w-[480px] mx-auto min-h-screen relative;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Headings */
+  h1 {
+    @apply text-4xl font-bold tracking-tight;
+  }
+  h2 {
+    @apply text-3xl font-bold tracking-tight;
+  }
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+  h4 {
+    @apply text-xl font-semibold;
+  }
+  h5 {
+    @apply text-lg font-medium;
+  }
+  h6 {
+    @apply text-base font-medium;
+  }
+  /* Links */
+  a {
+    @apply text-primary-600 no-underline transition-colors duration-300;
+  }
+  a:hover {
+    @apply text-primary-700 underline;
+  }
+  /* Buttons */
+  button {
+    @apply cursor-pointer transition-all duration-300;
+  }
+  /* Inputs */
+  input,
+  textarea,
+  select {
+    @apply outline-none;
+  }
+  /* Images */
+  img {
+    @apply max-w-full h-auto;
+  }
+}
+/* ========================================
+   COMPONENTS LAYER - Reusable Components
+   ======================================== */
+@layer components {
+  /* ===== SCREEN MANAGEMENT ===== */
+  .screen {
+    @apply hidden min-h-screen pb-20;
+  }
+  .screen.active {
+    @apply block animate-fade-in;
+  }
+  /* ===== CUSTOM SHAPES ===== */
+  
+  /* Droplet (Blood Drop Logo) */
+  .droplet {
+    @apply w-20 h-24 relative;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+  }
+  .droplet-small {
+    @apply w-16 h-20;
+  }
+  .droplet-large {
+    @apply w-24 h-28;
+  }
+  /* Pill (Vitamin Capsule) */
+  .pill {
+    @apply rounded-full shadow-md;
+    width: 60px;
+    height: 20px;
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #ef4444 50%, #dc2626 100%);
+  }
+  .pill-large {
+    width: 80px;
+    height: 24px;
+  }
+  /* ===== NAVIGATION ===== */
+  /* Bottom Navigation */
+  .bottom-nav {
+    @apply fixed bottom-0 left-1/2 transform -translate-x-1/2;
+    @apply w-full max-w-[480px] bg-white border-t border-gray-200;
+    @apply hidden z-50 shadow-lg;
+  }
+  .bottom-nav.active {
+    @apply flex;
+  }
+  .nav-item {
+    @apply flex-1 py-3 flex flex-col items-center justify-center;
+    @apply text-gray-400 transition-colors duration-200;
+  }
+  .nav-item.active {
+    @apply text-primary-600;
+  }
+  .nav-item:hover {
+    @apply text-primary-500;
+  }
+  /* ===== CARDS ===== */
+  .card {
+    @apply bg-white rounded-2xl p-6 shadow-md transition-shadow duration-300;
+  }
+  .card:hover {
+    @apply shadow-lg;
+  }
+  .card-compact {
+    @apply p-4;
+  }
+  .card-bordered {
+    @apply border border-gray-200;
+  }
+  /* ===== BUTTONS ===== */
+  .btn {
+    @apply px-6 py-3 rounded-xl font-semibold;
+    @apply transition-all duration-300;
+    @apply active:scale-95;
+  }
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700;
+    @apply shadow-md hover:shadow-lg;
+  }
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+  }
+  .btn-success {
+    @apply bg-green-500 text-white hover:bg-green-600;
+  }
+  .btn-danger {
+    @apply bg-red-500 text-white hover:bg-red-600;
+  }
+  .btn-outline {
+    @apply border-2 border-primary-600 text-primary-600;
+    @apply hover:bg-primary-600 hover:text-white;
+  }
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+  .btn-lg {
+    @apply px-8 py-4 text-lg;
+  }
+  .btn-block {
+    @apply w-full;
+  }
+  /* ===== INPUTS ===== */
+  .input {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-xl;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply transition-all duration-300;
+  }
+  .input-error {
+    @apply border-red-500 focus:ring-red-500;
+  }
+  .input-success {
+    @apply border-green-500 focus:ring-green-500;
+  }
+  /* ===== FILE UPLOAD ===== */
+  .file-upload-area {
+    @apply border-2 border-dashed border-gray-300 rounded-xl;
+    @apply p-10 text-center bg-gray-50;
+    @apply cursor-pointer transition-all duration-300;
+  }
+  .file-upload-area:hover {
+    @apply border-primary-500 bg-primary-50;
+  }
+  .file-upload-area.has-file {
+    @apply border-green-500 bg-green-50;
+  }
+  /* ===== MODALS ===== */
+  .modal {
+    @apply fixed top-0 left-1/2 transform -translate-x-1/2;
+    @apply w-full max-w-[480px] h-screen;
+    @apply bg-black bg-opacity-50 z-[100];
+    @apply items-center justify-center hidden;
+  }
+  .modal.active {
+    @apply flex animate-fade-in;
+  }
+  .modal-content {
+    @apply bg-white rounded-3xl p-8 mx-6 max-w-sm;
+    @apply text-center animate-slide-up shadow-2xl;
+  }
+  .modal-overlay {
+    @apply absolute inset-0 bg-black bg-opacity-50;
+  }
+  /* ===== BADGES ===== */
+  .badge {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+  }
+  .badge-primary {
+    @apply bg-primary-100 text-primary-600;
+  }
+  .badge-success {
+    @apply bg-green-100 text-green-600;
+  }
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-600;
+  }
+  .badge-danger {
+    @apply bg-red-100 text-red-600;
+  }
+  .badge-info {
+    @apply bg-blue-100 text-blue-600;
+  }
+  /* ===== ALERTS ===== */
+  .alert {
+    @apply p-4 rounded-lg mb-4;
+  }
+  .alert-success {
+    @apply bg-green-50 text-green-800 border border-green-200;
+  }
+  .alert-error {
+    @apply bg-red-50 text-red-800 border border-red-200;
+  }
+  .alert-warning {
+    @apply bg-yellow-50 text-yellow-800 border border-yellow-200;
+  }
+  .alert-info {
+    @apply bg-blue-50 text-blue-800 border border-blue-200;
+  }
+  /* ===== TOAST ===== */
+  .toast {
+    @apply fixed top-4 left-1/2 transform -translate-x-1/2;
+    @apply bg-white rounded-xl shadow-2xl px-6 py-4 z-[200];
+    @apply animate-slide-down;
+  }
+  .toast-success {
+    @apply border-l-4 border-green-500;
+  }
+  .toast-error {
+    @apply border-l-4 border-red-500;
+  }
+  /* ===== LOADER ===== */
+  .loader {
+    @apply w-8 h-8 border-4 border-gray-200 border-t-primary-600;
+    @apply rounded-full animate-spin;
+  }
+  .loader-sm {
+    @apply w-4 h-4 border-2;
+  }
+  .loader-lg {
+    @apply w-12 h-12 border-4;
+  }
+  /* ===== PROGRESS BAR ===== */
+  .progress-bar {
+    @apply w-full bg-gray-200 rounded-full h-2 overflow-hidden;
+  }
+  .progress-bar-fill {
+    @apply bg-primary-600 h-full rounded-full transition-all duration-500;
+  }
+  /* ===== DIVIDER ===== */
+  .divider {
+    @apply border-t border-gray-200 my-6;
+  }
+  .divider-vertical {
+    @apply border-l border-gray-200 mx-4 h-full;
+  }
+  /* ===== CHART CONTAINER ===== */
+  .chart-container {
+    @apply relative h-52 my-5;
+  }
+  .chart-container-sm {
+    @apply h-40;
+  }
+  .chart-container-lg {
+    @apply h-64;
+  }
+  /* ===== AVATAR ===== */
+  .avatar {
+    @apply rounded-full overflow-hidden;
+  }
+  .avatar-sm {
+    @apply w-8 h-8;
+  }
+  .avatar-md {
+    @apply w-12 h-12;
+  }
+  .avatar-lg {
+    @apply w-16 h-16;
+  }
+  .avatar-xl {
+    @apply w-24 h-24;
+  }
+  /* ===== LIST ===== */
+  .list-item {
+    @apply flex items-center justify-between py-3 border-b border-gray-200;
+  }
+  .list-item:last-child {
+    @apply border-b-0;
+  }
+  /* ===== SKELETON ===== */
+  .skeleton {
+    @apply bg-gray-200 animate-pulse rounded;
+  }
+  .skeleton-text {
+    @apply h-4 w-full mb-2;
+  }
+  .skeleton-circle {
+    @apply rounded-full;
+  }
+}
+/* ========================================
+   UTILITIES LAYER - Custom Utilities
+   ======================================== */
+@layer utilities {
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+  /* Hide Scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  /* Text Gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  }
+  .text-gradient-red {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #ef4444, #dc2626);
+  }
+  /* Glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .glass-dark {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  /* Safe Area (iOS) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  /* Tap Highlight */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Text Shadow */
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  /* Truncate Multi-line */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* Aspect Ratios */
+  .aspect-square {
+    aspect-ratio: 1 / 1;
+  }
+  .aspect-video {
+    aspect-ratio: 16 / 9;
+  }
+  .aspect-4-3 {
+    aspect-ratio: 4 / 3;
+  }
+}
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+/* Animation Classes */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out;
+}
+.animate-bounce-slow {
+  animation: bounce 2s ease-in-out infinite;
+}
+.animate-pulse-slow {
+  animation: pulse 3s ease-in-out infinite;
+}
+/* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
+/* Mobile Only */
+@media (max-width: 480px) {
+  .mobile-only {
+    @apply block;
+  }
+  
+  .desktop-only {
+    @apply hidden;
+  }
+}
+/* Desktop Only */
+@media (min-width: 481px) {
+  .mobile-only {
+    @apply hidden;
+  }
+  
+  .desktop-only {
+    @apply block;
+  }
+}
+/* ========================================
+   DARK MODE (Optional)
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  .dark-mode-auto {
+    @apply bg-gray-900 text-gray-100;
+  }
+}
+.dark {
+  @apply bg-gray-900 text-gray-100;
+}
+.dark .card {
+  @apply bg-gray-800 border-gray-700;
+}
+.dark .input {
+  @apply bg-gray-800 border-gray-700 text-gray-100;
+}
+.dark .bottom-nav {
+  @apply bg-gray-800 border-gray-700;
+}
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  body {
+    @apply max-w-full;
+  }
+  
+  .bottom-nav {
+    @apply hidden;
+  }
+}

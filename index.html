@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modiva - Monitoring Distribusi Vitamin</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/components.css">
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash" class="screen active">
+        <div class="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-blue-500 to-blue-700 text-white px-6">
+            <div class="mb-8 flex items-center justify-center">
+                <div class="droplet"></div>
+            </div>
+            <h1 class="text-4xl font-bold mb-4">Modiva</h1>
+            <div class="mb-12 flex gap-2">
+                <div class="pill"></div>
+                <div class="pill" style="width: 80px;"></div>
+            </div>
+            <p class="text-lg text-center max-w-xs">Pantau Kesehatan,<br>Rutin Minum Vitamin</p>
+            <div class="mt-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Login Screen -->
+    <div id="login" class="screen">
+        <div class="min-h-screen bg-gradient-to-br from-blue-500 to-blue-700 flex flex-col items-center justify-center px-6">
+            <div class="mb-8">
+                <div class="droplet" style="width: 60px; height: 75px;"></div>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Modiva</h1>
+            <p class="text-white/80 mb-12">Monitoring Distribusi Vitamin</p>
+            
+            <div class="w-full max-w-sm bg-white rounded-3xl p-8 shadow-xl">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Masuk</h2>
+                <form id="loginForm" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">NISN</label>
+                        <input type="text" id="nisn" value="0110222079" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                            placeholder="Masukkan NISN">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ID Sekolah</label>
+                        <input type="text" id="schoolId" value="SMPN001JKT" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                            placeholder="Masukkan ID Sekolah">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition mt-6">
+                        Masuk
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Dashboard / Home -->
+    <div id="home" class="screen">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 text-white px-6 pt-12 pb-8 rounded-b-3xl">
+            <h1 class="text-2xl font-bold mb-1">Hai, <span id="userName">Aisyah</span> 👋</h1>
+            <p class="text-blue-100">Jangan lupa minum vitamin hari ini!</p>
+        </div>
+        
+        <div class="px-6 mt-6 space-y-6">
+            <!-- Vitamin Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-md">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-800">Informasi Vitamin</h3>
+                    <span class="text-3xl">💊</span>
+                </div>
+                <div class="flex items-end gap-2 mb-2">
+                    <span class="text-4xl font-bold text-blue-600" id="consumedCount">8</span>
+                    <span class="text-2xl text-gray-400">/</span>
+                    <span class="text-2xl text-gray-600" id="totalTarget">48</span>
+                </div>
+                <p class="text-gray-600 text-sm">Jumlah vitamin diminum</p>
+                <div class="mt-4 bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: 17%" id="progressBar"></div>
+                </div>
+            </div>
+            <!-- Quick Report Button -->
+            <button onclick="navigateTo('report-form')" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-semibold text-lg shadow-lg hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                <span class="text-2xl">+</span>
+                Isi Laporan Konsumsi
+            </button>
+            <!-- HB Trend -->
+            <div class="bg-white rounded-2xl p-6 shadow-md">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-800">Tren Hemoglobin</h3>
+                    <span class="text-sm text-gray-500">Minggu ini</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-3xl font-bold text-red-600" id="lastHB">12.5</span>
+                    <span class="text-gray-600 ml-1">g/dL</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="hbChart"></canvas>
+                </div>
+            </div>
+            <!-- Health Tips -->
+            <div class="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 shadow-md text-white">
+                <h3 class="font-semibold mb-2">Tahukah Kamu? 💡</h3>
+                <p class="text-sm mb-4 text-green-50">Vitamin D membantu penyerapan kalsium untuk tulang yang kuat. Dapatkan sinar matahari pagi 10-15 menit setiap hari!</p>
+                <button onclick="navigateTo('health-tips')" class="bg-white text-green-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-50 transition">
+                    Pelajari Lebih Lanjut →
+                </button>
+            </div>
+            <!-- Recent History -->
+            <div class="bg-white rounded-2xl p-6 shadow-md">
+                <h3 class="font-semibold text-gray-800 mb-4">Riwayat Konsumsi Terbaru</h3>
+                <div class="space-y-3" id="recentHistory">
+                    <div class="flex items-center justify-between py-3 border-b">
+                        <div>
+                            <p class="font-medium text-gray-800">12 Mei 2024</p>
+                            <p class="text-sm text-gray-500">Nilai HB: 12.5 g/dL</p>
+                        </div>
+                        <span class="text-green-600 text-sm font-semibold bg-green-100 px-3 py-1 rounded-full">Selesai</span>
+                    </div>
+                    <div class="flex items-center justify-between py-3 border-b">
+                        <div>
+                            <p class="font-medium text-gray-800">11 Mei 2024</p>
+                            <p class="text-sm text-gray-500">Nilai HB: 12.3 g/dL</p>
+                        </div>
+                        <span class="text-green-600 text-sm font-semibold bg-green-100 px-3 py-1 rounded-full">Selesai</span>
+                    </div>
+                    <div class="flex items-center justify-between py-3">
+                        <div>
+                            <p class="font-medium text-gray-800">10 Mei 2024</p>
+                            <p class="text-sm text-gray-500">Nilai HB: 12.1 g/dL</p>
+                        </div>
+                        <span class="text-green-600 text-sm font-semibold bg-green-100 px-3 py-1 rounded-full">Selesai</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Report Form -->
+    <div id="report-form" class="screen">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 text-white px-6 pt-12 pb-6">
+            <button onclick="navigateTo('home')" class="mb-4 text-white">
+                <span class="text-2xl">←</span>
+            </button>
+            <h1 class="text-2xl font-bold">Lapor Konsumsi Vitamin</h1>
+        </div>
+        
+        <div class="px-6 py-6">
+            <form id="consumptionForm" class="space-y-6">
+                <div class="bg-white rounded-2xl p-6 shadow-md">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Tanggal Konsumsi</label>
+                    <input type="date" id="consumptionDate" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-md">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Bukti Minum Vitamin</label>
+                    <div class="file-upload-area" id="uploadArea" onclick="document.getElementById('photoInput').click()">
+                        <div id="uploadPlaceholder">
+                            <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <p class="text-gray-600 font-medium">Pilih Foto</p>
+                            <p class="text-gray-400 text-sm mt-1">JPG, PNG (Max 5MB)</p>
+                        </div>
+                        <div id="uploadPreview" class="hidden">
+                            <img id="previewImage" class="max-w-full max-h-48 mx-auto rounded-lg mb-2">
+                            <p class="text-green-600 font-medium">✓ Foto berhasil dipilih</p>
+                        </div>
+                    </div>
+                    <input type="file" id="photoInput" accept="image/*" class="hidden">
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-md">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Catatan (Opsional)</label>
+                    <textarea id="notes" rows="4" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Tambahkan catatan jika diperlukan..."></textarea>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:bg-blue-700 transition">
+                    Kirim Laporan
+                </button>
+            </form>
+        </div>
+    </div>
+    <!-- Reports -->
+    <div id="reports" class="screen">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 text-white px-6 pt-12 pb-6">
+            <h1 class="text-2xl font-bold mb-1">Laporan</h1>
+            <p class="text-blue-100" id="reportStudentName">Aisyah</p>
+            <p class="text-sm text-blue-200">ID Siswa: <span id="reportStudentId">20231001</span></p>
+        </div>
+        
+        <div class="px-6 py-6 space-y-6">
+            <!-- Hemoglobin Trends -->
+            <div class="bg-white rounded-2xl p-6 shadow-md">
+                <h3 class="font-semibold text-gray-800 mb-2">Tren Hemoglobin (6 Bulan)</h3>
+                <p class="text-sm text-gray-500 mb-4">Nilai terakhir: <span class="text-red-600 font-bold">12.5 g/dL</span></p>
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="hb6MonthChart"></canvas>
+                </div>
+            </div>
+            <!-- Vitamin Consumption -->
+            <div class="bg-white rounded-2xl p-6 shadow-md">
+                <h3 class="font-semibold text-gray-800 mb-2">Konsumsi Vitamin Bulanan</h3>
+                <div class="flex items-end gap-2 mb-4">
+                    <span class="text-3xl font-bold text-blue-600">85%</span>
+                    <span class="text-gray-600">kepatuhan</span>
+                </div>
+                <div class="chart-container" style="height: 200px;">
+                    <canvas id="vitaminConsumptionChart"></canvas>
+                </div>
+            </div>
+            <!-- Past Reports -->
+            <div class="bg-white rounded-2xl p-6 shadow-md">
+                <h3 class="font-semibold text-gray-800 mb-4">Riwayat Laporan</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between py-3 border-b">
+                        <div>
+                            <p class="font-medium text-gray-800">15 Mei 2024</p>
+                            <p class="text-sm text-gray-500">HB: 12.5 g/dL</p>
+                        </div>
+                        <button class="text-blue-600 text-sm font-semibold">Lihat</button>
+                    </div>
+                    <div class="flex items-center justify-between py-3 border-b">
+                        <div>
+                            <p class="font-medium text-gray-800">14 Mei 2024</p>
+                            <p class="text-sm text-gray-500">HB: 12.3 g/dL</p>
+                        </div>
+                        <button class="text-blue-600 text-sm font-semibold">Lihat</button>
+                    </div>
+                    <div class="flex items-center justify-between py-3 border-b">
+                        <div>
+                            <p class="font-medium text-gray-800">13 Mei 2024</p>
+                            <p class="text-sm text-gray-500">HB: 12.1 g/dL</p>
+                        </div>
+                        <button class="text-blue-600 text-sm font-semibold">Lihat</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Notifications -->
+    <div id="notifications" class="screen">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 text-white px-6 pt-12 pb-6">
+            <h1 class="text-2xl font-bold">Notifikasi</h1>
+        </div>
+        
+        <div class="px-6 py-6">
+            <div class="space-y-4" id="notificationList">
+                <div class="bg-white rounded-2xl p-5 shadow-md">
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">💊</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-800 mb-1">Pengingat Minum Vitamin</h4>
+                            <p class="text-sm text-gray-600 mb-2">Jangan lupa minum vitamin hari ini! Konsistensi adalah kunci kesehatan yang baik.</p>
+                            <p class="text-xs text-gray-400">2 jam yang lalu</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl p-5 shadow-md">
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">✨</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-800 mb-1">Pesan Motivasi</h4>
+                            <p class="text-sm text-gray-600 mb-2">Luar biasa! Kamu sudah konsisten minum vitamin selama 7 hari berturut-turut. Pertahankan!</p>
+                            <p class="text-xs text-gray-400">1 hari yang lalu</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl p-5 shadow-md">
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🩺</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-800 mb-1">Reminder Pemeriksaan HB</h4>
+                            <p class="text-sm text-gray-600 mb-2">Saatnya melakukan pemeriksaan hemoglobin bulanan. Hubungi petugas kesehatan sekolah.</p>
+                            <p class="text-xs text-gray-400">2 hari yang lalu</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Profile -->
+    <div id="profile" class="screen">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 text-white px-6 pt-12 pb-12">
+            <h1 class="text-2xl font-bold mb-6">Profil Saya</h1>
+            <div class="flex flex-col items-center">
+                <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-4xl mb-4 shadow-lg">
+                    👤
+                </div>
+                <h2 class="text-xl font-bold" id="profileName">Aisyah</h2>
+                <p class="text-blue-100" id="profileSchool">SMPN 1 Jakarta</p>
+            </div>
+        </div>
+        
+        <div class="px-6 -mt-6">
+            <div class="bg-white rounded-2xl p-6 shadow-md space-y-4">
+                <div class="pb-4 border-b">
+                    <p class="text-sm text-gray-500 mb-1">NISN</p>
+                    <p class="font-semibold text-gray-800" id="profileNisn">0110222079</p>
+                </div>
+                <div class="pb-4 border-b">
+                    <p class="text-sm text-gray-500 mb-1">Email</p>
+                    <p class="font-semibold text-gray-800" id="profileEmail">aisyah@email.com</p>
+                </div>
+                <div class="pb-4 border-b">
+                    <p class="text-sm text-gray-500 mb-1">Tinggi Badan</p>
+                    <p class="font-semibold text-gray-800"><span id="profileHeight">160</span> cm</p>
+                </div>
+                <div class="pb-4 border-b">
+                    <p class="text-sm text-gray-500 mb-1">Berat Badan</p>
+                    <p class="font-semibold text-gray-800"><span id="profileWeight">50</span> kg</p>
+                </div>
+                <div class="pb-4 border-b">
+                    <p class="text-sm text-gray-500 mb-1">Nilai HB Terakhir</p>
+                    <p class="font-semibold text-red-600"><span id="profileHB">12.5</span> g/dL</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">ID Siswa</p>
+                    <p class="font-semibold text-gray-800" id="profileStudentId">20231001</p>
+                </div>
+            </div>
+            <button class="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold mt-6 shadow-lg hover:bg-blue-700 transition">
+                Edit Profile
+            </button>
+            <button onclick="logout()" class="w-full bg-red-100 text-red-600 py-4 rounded-xl font-semibold mt-4 hover:bg-red-200 transition">
+                Keluar
+            </button>
+        </div>
+    </div>
+    <!-- Health Tips Details -->
+    <div id="health-tips" class="screen">
+        <div class="bg-gradient-to-br from-green-500 to-emerald-600 text-white px-6 pt-12 pb-6">
+            <button onclick="navigateTo('home')" class="mb-4 text-white">
+                <span class="text-2xl">←</span>
+            </button>
+            <h1 class="text-2xl font-bold">Wawasan Kesehatan</h1>
+        </div>
+        
+        <div class="px-6 py-6">
+            <div class="bg-white rounded-2xl overflow-hidden shadow-md mb-6">
+                <div class="h-48 bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                    <span class="text-8xl">☀️</span>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Peran Vital Vitamin D</h2>
+                
+                <div class="space-y-4 text-gray-700">
+                    <p>Vitamin D adalah nutrisi penting yang memainkan peran kunci dalam kesehatan tulang dan sistem kekebalan tubuh.</p>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Manfaat Vitamin D:</h3>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>Membantu penyerapan kalsium untuk tulang yang kuat</li>
+                        <li>Meningkatkan sistem kekebalan tubuh</li>
+                        <li>Mendukung kesehatan otot</li>
+                        <li>Membantu mengatur mood dan mengurangi depresi</li>
+                        <li>Mendukung kesehatan jantung</li>
+                    </ul>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">Cara Mendapatkan Vitamin D:</h3>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>Paparan sinar matahari pagi (10-15 menit sehari)</li>
+                        <li>Konsumsi ikan berlemak (salmon, tuna, makarel)</li>
+                        <li>Telur dan produk susu yang diperkaya</li>
+                        <li>Suplemen vitamin D (sesuai anjuran dokter)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Bottom Navigation -->
+    <div id="bottomNav" class="bottom-nav">
+        <button onclick="navigateTo('home')" class="flex-1 py-4 flex flex-col items-center justify-center text-blue-600" id="nav-home">
+            <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+            </svg>
+            <span class="text-xs font-medium">Home</span>
+        </button>
+        <button onclick="navigateTo('reports')" class="flex-1 py-4 flex flex-col items-center justify-center text-gray-400" id="nav-reports">
+            <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path>
+            </svg>
+            <span class="text-xs font-medium">Laporan</span>
+        </button>
+        <button onclick="navigateTo('notifications')" class="flex-1 py-4 flex flex-col items-center justify-center text-gray-400" id="nav-notifications">
+            <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
+            </svg>
+            <span class="text-xs font-medium">Notifikasi</span>
+        </button>
+        <button onclick="navigateTo('profile')" class="flex-1 py-4 flex flex-col items-center justify-center text-gray-400" id="nav-profile">
+            <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-xs font-medium">Profil</span>
+        </button>
+    </div>
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="bg-white rounded-3xl p-8 mx-6 max-w-sm text-center">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-3">Berhasil!</h2>
+            <p class="text-gray-600 mb-6">Laporan konsumsi vitamin berhasil dikirim.</p>
+            <button onclick="closeModal()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition">
+                OK
+            </button>
+        </div>
+    </div>
+    <!-- JavaScript Files -->
+    <script src="assets/js/state.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/charts.js"></script>
+    <script src="assets/js/navigation.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

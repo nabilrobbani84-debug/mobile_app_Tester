@@ -1,0 +1,549 @@
+/**
+ * Custom CSS - Modiva Application
+ * Additional custom styles yang tidak bisa dibuat dengan Tailwind
+ * Gunakan file ini untuk styling khusus yang memerlukan CSS vanilla
+ */
+/* ========================================
+   CUSTOM SHAPES & GRAPHICS
+   ======================================== */
+/* Droplet Shape - Blood Drop Logo */
+.droplet {
+  width: 80px;
+  height: 100px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  position: relative;
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+}
+.droplet::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+/* Small Droplet Variant */
+.droplet-small {
+  width: 60px;
+  height: 75px;
+}
+/* Large Droplet Variant */
+.droplet-large {
+  width: 100px;
+  height: 125px;
+}
+/* Pill/Capsule Shape - Vitamin */
+.pill {
+  width: 60px;
+  height: 20px;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #ef4444 50%, #dc2626 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+.pill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+}
+/* Large Pill Variant */
+.pill-large {
+  width: 80px;
+  height: 24px;
+  border-radius: 12px;
+}
+/* Extra Large Pill */
+.pill-xl {
+  width: 100px;
+  height: 30px;
+  border-radius: 15px;
+}
+/* ========================================
+   GRADIENT BACKGROUNDS
+   ======================================== */
+/* Primary Gradient */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+/* Secondary Gradient (Red) */
+.bg-gradient-secondary {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+/* Success Gradient */
+.bg-gradient-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+/* Warning Gradient */
+.bg-gradient-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+/* Info Gradient */
+.bg-gradient-info {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+/* Purple Gradient */
+.bg-gradient-purple {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+/* Pink Gradient */
+.bg-gradient-pink {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+}
+/* Multicolor Gradient */
+.bg-gradient-rainbow {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+}
+/* ========================================
+   GLASSMORPHISM EFFECTS
+   ======================================== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+}
+.glass-card-dark {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+/* ========================================
+   CUSTOM SHADOWS
+   ======================================== */
+.shadow-soft {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.shadow-medium {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.shadow-hard {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+.shadow-colored-blue {
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+}
+.shadow-colored-red {
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+.shadow-colored-green {
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+}
+/* Inner Shadow */
+.shadow-inner-soft {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+/* ========================================
+   FLOATING ANIMATIONS
+   ======================================== */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+.animate-float-slow {
+  animation: floatSlow 5s ease-in-out infinite;
+}
+/* ========================================
+   RIPPLE EFFECT
+   ======================================== */
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-container::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+.ripple-container:active::after {
+  width: 300px;
+  height: 300px;
+}
+/* ========================================
+   SHIMMER LOADING EFFECT
+   ======================================== */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #e0e0e0 50%,
+    #f0f0f0 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+.shimmer-line {
+  height: 12px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+.shimmer-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+/* ========================================
+   PROGRESS CIRCLES
+   ======================================== */
+.progress-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #3b82f6 0deg,
+    #3b82f6 var(--progress, 0deg),
+    #e5e7eb var(--progress, 0deg),
+    #e5e7eb 360deg
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.progress-circle::before {
+  content: '';
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: white;
+}
+.progress-circle-value {
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #3b82f6;
+}
+/* ========================================
+   CUSTOM SCROLLBAR (Enhanced)
+   ======================================== */
+/* Chrome, Safari, Edge */
+.custom-scrollbar-fancy::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar-fancy::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+.custom-scrollbar-fancy::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-radius: 10px;
+  transition: background 0.3s;
+}
+.custom-scrollbar-fancy::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+/* Firefox */
+.custom-scrollbar-fancy {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #f1f5f9;
+}
+/* ========================================
+   NEON GLOW EFFECTS
+   ======================================== */
+.neon-blue {
+  box-shadow: 0 0 10px #3b82f6,
+              0 0 20px #3b82f6,
+              0 0 30px #3b82f6;
+}
+.neon-red {
+  box-shadow: 0 0 10px #ef4444,
+              0 0 20px #ef4444,
+              0 0 30px #ef4444;
+}
+.neon-green {
+  box-shadow: 0 0 10px #10b981,
+              0 0 20px #10b981,
+              0 0 30px #10b981;
+}
+/* Text Neon */
+.text-neon-blue {
+  text-shadow: 0 0 10px #3b82f6,
+               0 0 20px #3b82f6,
+               0 0 30px #3b82f6;
+}
+/* ========================================
+   CARD HOVER EFFECTS
+   ======================================== */
+.card-hover-lift {
+  transition: all 0.3s ease;
+}
+.card-hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+.card-hover-scale {
+  transition: all 0.3s ease;
+}
+.card-hover-scale:hover {
+  transform: scale(1.05);
+}
+.card-hover-rotate {
+  transition: all 0.3s ease;
+}
+.card-hover-rotate:hover {
+  transform: rotate(2deg);
+}
+/* ========================================
+   PARTICLE BACKGROUND EFFECT
+   ======================================== */
+.particles-bg {
+  position: relative;
+  overflow: hidden;
+}
+.particles-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: particleMove 20s linear infinite;
+}
+@keyframes particleMove {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50px);
+  }
+}
+/* ========================================
+   TOOLTIP CUSTOM
+   ======================================== */
+.tooltip {
+  position: relative;
+}
+.tooltip::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 115%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.tooltip:hover::before,
+.tooltip:hover::after {
+  opacity: 1;
+}
+/* ========================================
+   BADGE PULSE ANIMATION
+   ======================================== */
+@keyframes badgePulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+.badge-pulse {
+  animation: badgePulse 2s infinite;
+}
+/* ========================================
+   LOADING SPINNER VARIANTS
+   ======================================== */
+@keyframes spinnerDots {
+  0%, 100% {
+    box-shadow: 0 -20px 0 0 rgba(59, 130, 246, 0.2),
+                20px 0 0 0 rgba(59, 130, 246, 1),
+                0 20px 0 0 rgba(59, 130, 246, 0.2),
+                -20px 0 0 0 rgba(59, 130, 246, 0.2);
+  }
+  25% {
+    box-shadow: 0 -20px 0 0 rgba(59, 130, 246, 1),
+                20px 0 0 0 rgba(59, 130, 246, 0.2),
+                0 20px 0 0 rgba(59, 130, 246, 0.2),
+                -20px 0 0 0 rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 -20px 0 0 rgba(59, 130, 246, 0.2),
+                20px 0 0 0 rgba(59, 130, 246, 0.2),
+                0 20px 0 0 rgba(59, 130, 246, 1),
+                -20px 0 0 0 rgba(59, 130, 246, 0.2);
+  }
+  75% {
+    box-shadow: 0 -20px 0 0 rgba(59, 130, 246, 0.2),
+                20px 0 0 0 rgba(59, 130, 246, 0.2),
+                0 20px 0 0 rgba(59, 130, 246, 0.2),
+                -20px 0 0 0 rgba(59, 130, 246, 1);
+  }
+}
+.spinner-dots {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: spinnerDots 1.2s linear infinite;
+}
+/* ========================================
+   3D CARD EFFECT
+   ======================================== */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+.card-3d:hover {
+  transform: perspective(1000px) rotateY(5deg) rotateX(5deg);
+}
+/* ========================================
+   STAGGERED FADE-IN
+   ======================================== */
+@keyframes staggeredFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.staggered-item:nth-child(1) {
+  animation: staggeredFadeIn 0.5s ease-out 0.1s both;
+}
+.staggered-item:nth-child(2) {
+  animation: staggeredFadeIn 0.5s ease-out 0.2s both;
+}
+.staggered-item:nth-child(3) {
+  animation: staggeredFadeIn 0.5s ease-out 0.3s both;
+}
+.staggered-item:nth-child(4) {
+  animation: staggeredFadeIn 0.5s ease-out 0.4s both;
+}
+.staggered-item:nth-child(5) {
+  animation: staggeredFadeIn 0.5s ease-out 0.5s both;
+}
+/* ========================================
+   FOCUS VISIBLE STYLES
+   ======================================== */
+.focus-ring:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+/* ========================================
+   PRINT UTILITIES
+   ======================================== */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    max-width: 100% !important;
+  }
+  
+  .bg-gradient-primary,
+  .bg-gradient-secondary {
+    background: white !important;
+    color: black !important;
+  }
+}
+/* ========================================
+   MOBILE SPECIFIC
+   ======================================== */
+@media (max-width: 480px) {
+  /* Larger tap targets for mobile */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent text size adjustment on orientation change */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+/* ========================================
+   DARK MODE ENHANCEMENTS
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  .glass-card {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      #2d2d2d 0%,
+      #1d1d1d 50%,
+      #2d2d2d 100%
+    );
+  }
+}
