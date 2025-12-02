@@ -1,5 +1,3 @@
-// src/views/screens/LoginScreen.js
-// Login Screen Component
 import React, { useState } from 'react';
 import {
   View,
@@ -17,18 +15,23 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../state/AuthContext';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../../config/theme';
+
 const LoginScreen = () => {
   const { login, isLoading, error, clearError } = useAuth();
   const [nisn, setNisn] = useState('0110222079');
   const [schoolId, setSchoolId] = useState('SMPN1JKT');
   const [rememberMe, setRememberMe] = useState(true);
+  
+  // State untuk fokus input agar border berubah warna
   const [nisnFocused, setNisnFocused] = useState(false);
   const [schoolIdFocused, setSchoolIdFocused] = useState(false);
+
   const handleLogin = async () => {
     // Clear previous error
     if (error) {
       clearError();
     }
+
     // Validate inputs
     if (!nisn.trim()) {
       Alert.alert('Error', 'Mohon masukkan NISN');
@@ -38,12 +41,15 @@ const LoginScreen = () => {
       Alert.alert('Error', 'Mohon masukkan ID Sekolah');
       return;
     }
+
     // Attempt login
-    const result = await login(nisn.trim(), schoolId.trim());
+    const result = await login({ nisn: nisn.trim(), schoolId: schoolId.trim() });
+    
     if (!result.success) {
-      Alert.alert('Login Gagal', result.error || 'Terjadi kesalahan');
+      Alert.alert('Login Gagal', String(result.error || 'Terjadi kesalahan'));
     }
   };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -78,12 +84,14 @@ const LoginScreen = () => {
           <Text style={styles.appName}>Modiva</Text>
           <Text style={styles.tagline}>Monitoring Distribusi Vitamin</Text>
         </View>
+
         {/* Form Card */}
         <View style={styles.formCard}>
           <Text style={styles.title}>Masuk ke Akun</Text>
           <Text style={styles.subtitle}>
             Masukkan NISN dan ID Sekolah untuk melanjutkan
           </Text>
+
           {/* NISN Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
@@ -112,6 +120,7 @@ const LoginScreen = () => {
             </View>
             <Text style={styles.helpText}>NISN terdiri dari 10 digit angka</Text>
           </View>
+
           {/* School ID Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
@@ -138,6 +147,7 @@ const LoginScreen = () => {
               />
             </View>
           </View>
+
           {/* Remember Me */}
           <TouchableOpacity
             style={styles.rememberContainer}
@@ -154,6 +164,7 @@ const LoginScreen = () => {
             </View>
             <Text style={styles.rememberText}>Ingat saya</Text>
           </TouchableOpacity>
+
           {/* Login Button */}
           <TouchableOpacity
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
@@ -167,6 +178,7 @@ const LoginScreen = () => {
               <Text style={styles.loginButtonText}>Masuk</Text>
             )}
           </TouchableOpacity>
+
           {/* Help Link */}
           <View style={styles.helpContainer}>
             <Text style={styles.helpLinkText}>Butuh bantuan? </Text>
@@ -179,6 +191,7 @@ const LoginScreen = () => {
     </KeyboardAvoidingView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -381,4 +394,5 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 });
+
 export default LoginScreen;

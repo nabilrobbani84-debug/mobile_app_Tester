@@ -1,15 +1,21 @@
-// src/state/AuthContext.js
-// Authentication Context for managing user authentication state
-import React, { createContext, useContext, useReducer, useCallback, useMemo } from 'react';
-import { saveAuthToken, saveUserData, clearUserSession, getAuthToken, getUserData } from '../utils/helpers/storageHelpers';
+import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect } from 'react';
+import { 
+  saveAuthToken, 
+  saveUserData, 
+  clearUserSession, 
+  getAuthToken, 
+  getUserData 
+} from '../utils/helpers/storageHelpers';
+
 // Initial state
 const initialState = {
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Default true agar aplikasi menunggu cek storage
   token: null,
   user: null,
   error: null,
 };
+
 // Action types
 const AUTH_ACTIONS = {
   LOGIN_START: 'LOGIN_START',
@@ -17,261 +23,172 @@ const AUTH_ACTIONS = {
   LOGIN_FAILURE: 'LOGIN_FAILURE',
   LOGOUT: 'LOGOUT',
   RESTORE_SESSION: 'RESTORE_SESSION',
-  UPDATE_USER: 'UPDATE_USER',
+  STOP_LOADING: 'STOP_LOADING',
   CLEAR_ERROR: 'CLEAR_ERROR',
-  SET_LOADING: 'SET_LOADING',
 };
-// Reducer function
+
+// Reducer
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.LOGIN_START:
-      return {
-        ...state,
-        isLoading: true,
-        error: null,
-      };
+      return { ...state, isLoading: true, error: null };
     case AUTH_ACTIONS.LOGIN_SUCCESS:
-      return {
-        ...state,
-        isAuthenticated: true,
-        isLoading: false,
-        token: action.payload.token,
-        user: action.payload.user,
-        error: null,
+      return { 
+        ...state, 
+        isAuthenticated: true, 
+        isLoading: false, 
+        token: action.payload.token, 
+        user: action.payload.user, 
+        error: null 
       };
     case AUTH_ACTIONS.LOGIN_FAILURE:
-      return {
-        ...state,
-        isAuthenticated: false,
-        isLoading: false,
-        token: null,
-        user: null,
-        error: action.payload,
+      return { 
+        ...state, 
+        isAuthenticated: false, 
+        isLoading: false, 
+        error: action.payload 
       };
     case AUTH_ACTIONS.LOGOUT:
-      return {
-        ...initialState,
-        isLoading: false,
-      };
+      return { ...initialState, isLoading: false };
     case AUTH_ACTIONS.RESTORE_SESSION:
-      return {
-        ...state,
-        isAuthenticated: true,
-        isLoading: false,
-        token: action.payload.token,
-        user: action.payload.user,
-        error: null,
+      return { 
+        ...state, 
+        isAuthenticated: true, 
+        isLoading: false, 
+        token: action.payload.token, 
+        user: action.payload.user 
       };
-    case AUTH_ACTIONS.UPDATE_USER:
-      return {
-        ...state,
-        user: {
-          ...state.user,
-          ...action.payload,
-        },
-      };
+    case AUTH_ACTIONS.STOP_LOADING:
+      return { ...state, isLoading: false };
     case AUTH_ACTIONS.CLEAR_ERROR:
-      return {
-        ...state,
-        error: null,
-      };
-    case AUTH_ACTIONS.SET_LOADING:
-      return {
-        ...state,
-        isLoading: action.payload,
-      };
+      return { ...state, error: null };
     default:
       return state;
   }
 };
-// Create context
+
 const AuthContext = createContext(null);
-// Mock API for login
-const mockLoginAPI = async (credentials) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+
+// Mock API yang lebih detail
+const mockLoginAPI = async ({ nisn, schoolId }) => {
+  await new Promise(resolve => setTimeout(resolve, 1500)); // Delay simulasi
   
-  const { nisn, schoolId } = credentials;
-  
-  // Mock validation
+  // Validasi Hardcode untuk Demo
   if (nisn === '0110222079' && schoolId === 'SMPN1JKT') {
     return {
       success: true,
       data: {
-        token: 'jwt_siswa_token_' + Date.now(),
+        token: 'dummy-jwt-token-' + Date.now(),
         user: {
-          id: '20231001',
-          name: 'Aisyah Putri',
-          nisn: '0110222079',
-          email: 'aisyah@email.com',
-          phone: '081234567890',
-          schoolId: 'SMPN1JKT',
-          schoolName: 'SMPN 1 Jakarta',
-          className: 'IX-A',
-          hbLast: 12.5,
-          consumptionCount: 8,
-          totalTarget: 48,
-          height: 165,
-          weight: 52,
-          birthDate: '2009-05-15',
-          gender: 'female',
-          bloodType: 'O',
-          avatar: null,
-          createdAt: '2023-07-01T00:00:00Z',
+          id: 'u123',
+          name: 'Nabil Robbani',
+          role: 'student',
+          nisn: nisn,
+          schoolId: schoolId,
+          email: 'nabil@example.com',
+          avatar: 'https://i.pravatar.cc/150?u=nabil'
         },
       },
     };
   }
   
-  // Invalid credentials
-  return {
-    success: false,
-    error: 'NISN atau ID Sekolah tidak valid',
+  return { 
+    success: false, 
+    error: 'NISN atau ID Sekolah tidak ditemukan. Coba: 0110222079 / SMPN1JKT' 
   };
 };
-// Provider component
+
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
-  // Login function
+
+  // Inisialisasi: Cek Login saat aplikasi dibuka
+  useEffect(() => {
+    const bootstrapAsync = async () => {
+      try {
+        const storedToken = await getAuthToken();
+        const storedUser = await getUserData();
+
+        if (storedToken && storedUser) {
+          dispatch({
+            type: AUTH_ACTIONS.RESTORE_SESSION,
+            payload: { token: storedToken, user: storedUser },
+          });
+        } else {
+          dispatch({ type: AUTH_ACTIONS.STOP_LOADING });
+        }
+      } catch (e) {
+        console.error('Restore session failed:', e);
+        dispatch({ type: AUTH_ACTIONS.STOP_LOADING });
+      }
+    };
+
+    bootstrapAsync();
+  }, []);
+
   const login = useCallback(async (credentials) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
-    
     try {
       const response = await mockLoginAPI(credentials);
       
       if (response.success) {
-        const { token, user } = response.data;
-        
-        // Save to storage
-        await saveAuthToken(token);
-        await saveUserData(user);
+        // Simpan ke storage HP
+        await saveAuthToken(response.data.token);
+        await saveUserData(response.data.user);
         
         dispatch({
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
-          payload: { token, user },
+          payload: { token: response.data.token, user: response.data.user },
         });
-        
-        return { success: true, user };
+        return { success: true };
       } else {
-        dispatch({
-          type: AUTH_ACTIONS.LOGIN_FAILURE,
-          payload: response.error,
+        dispatch({ 
+          type: AUTH_ACTIONS.LOGIN_FAILURE, 
+          payload: response.error 
         });
-        
         return { success: false, error: response.error };
       }
     } catch (error) {
-      const errorMessage = error.message || 'Terjadi kesalahan saat login';
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_FAILURE,
-        payload: errorMessage,
+      dispatch({ 
+        type: AUTH_ACTIONS.LOGIN_FAILURE, 
+        payload: 'Terjadi kesalahan jaringan' 
       });
-      
-      return { success: false, error: errorMessage };
+      return { success: false, error: 'Network Error' };
     }
   }, []);
-  // Logout function
+
   const logout = useCallback(async () => {
-    dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-    
     try {
-      await clearUserSession();
+      await clearUserSession(); // Hapus dari storage HP
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
-      return { success: true };
     } catch (error) {
-      console.error('Logout error:', error);
-      dispatch({ type: AUTH_ACTIONS.LOGOUT });
-      return { success: true };
+      console.error('Logout failed:', error);
     }
   }, []);
-  // Restore session function
-  const restoreSession = useCallback(async (token, user) => {
-    if (token && user) {
-      dispatch({
-        type: AUTH_ACTIONS.RESTORE_SESSION,
-        payload: { token, user },
-      });
-      return true;
-    }
-    
-    // Try to get from storage
-    try {
-      const storedToken = await getAuthToken();
-      const storedUser = await getUserData();
-      
-      if (storedToken && storedUser) {
-        dispatch({
-          type: AUTH_ACTIONS.RESTORE_SESSION,
-          payload: { token: storedToken, user: storedUser },
-        });
-        return true;
-      }
-    } catch (error) {
-      console.error('Restore session error:', error);
-    }
-    
-    return false;
-  }, []);
-  // Update user data
-  const updateUser = useCallback(async (userData) => {
-    dispatch({
-      type: AUTH_ACTIONS.UPDATE_USER,
-      payload: userData,
-    });
-    
-    // Update storage
-    const currentUser = state.user;
-    if (currentUser) {
-      await saveUserData({ ...currentUser, ...userData });
-    }
-  }, [state.user]);
-  // Clear error
+
   const clearError = useCallback(() => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
   }, []);
-  // Memoized value
+
   const value = useMemo(() => ({
-    // State
-    isAuthenticated: state.isAuthenticated,
-    isLoading: state.isLoading,
-    token: state.token,
-    user: state.user,
-    error: state.error,
-    
-    // Actions
+    ...state,
     login,
     logout,
-    restoreSession,
-    updateUser,
-    clearError,
-  }), [
-    state.isAuthenticated,
-    state.isLoading,
-    state.token,
-    state.user,
-    state.error,
-    login,
-    logout,
-    restoreSession,
-    updateUser,
-    clearError,
-  ]);
+    clearError
+  }), [state, login, logout, clearError]);
+
   return (
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
-// Custom hook to use auth context
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
   return context;
 };
-// Export for testing
-export { AUTH_ACTIONS, authReducer, initialState };
+
 export default AuthContext;
