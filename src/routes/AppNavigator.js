@@ -1,6 +1,6 @@
 // src/routes/AppNavigator.js
 // Main App Navigator - Root navigation container
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar, View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -9,11 +9,11 @@ import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 // Hooks & Services
 import { useAuth } from '../state/AuthContext';
-import { setNavigationRef, ROUTES } from '../utils/helpers/navigationHelpers';
+import { setNavigationRef } from '../utils/helpers/navigationHelpers';
 import { getAuthToken, getUserData } from '../utils/helpers/storageHelpers';
 import { COLORS } from '../config/theme';
 // Screens
-import { SplashTemplate } from '../views/templates/AuthTemplate';
+import SplashScreen from '../views/screens/splash.screen';
 const Stack = createNativeStackNavigator();
 /**
  * AppNavigator - Root navigator that handles auth state
@@ -23,25 +23,26 @@ const AppNavigator = () => {
   const { isAuthenticated, isLoading, restoreSession } = useAuth();
   const [isInitializing, setIsInitializing] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
+  // Memoize the initialization function
+  const initializeApp = useCallback(async () => {
+    try {
+      // Check for stored auth session
+      const token = await getAuthToken();
+      const userData = await getUserData();
+      if (token && userData) {
+        // Restore the session
+        await restoreSession(token, userData);
+      }
+    } catch (error) {
+      console.error('Failed to restore session:', error);
+    } finally {
+      setIsInitializing(false);
+    }
+  }, [restoreSession]);
   // Restore session on app launch
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Check for stored auth session
-        const token = await getAuthToken();
-        const userData = await getUserData();
-        if (token && userData) {
-          // Restore the session
-          await restoreSession(token, userData);
-        }
-      } catch (error) {
-        console.error('Failed to restore session:', error);
-      } finally {
-        setIsInitializing(false);
-      }
-    };
     initializeApp();
-  }, []);
+  }, [initializeApp]);
   // Handle splash screen timing
   useEffect(() => {
     const splashTimer = setTimeout(() => {
@@ -52,9 +53,7 @@ const AppNavigator = () => {
   // Show splash screen
   if (showSplash) {
     return (
-      <SplashTemplate
-        message="Pantau kesehatan, Rutin Minum Vitamin"
-        version="1.0.0"
+      <SplashScreen
         onAnimationComplete={() => setShowSplash(false)}
       />
     );

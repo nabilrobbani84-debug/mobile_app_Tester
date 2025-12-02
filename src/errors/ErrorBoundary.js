@@ -9,10 +9,14 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
+  Platform, // FIX 1: Tambahkan Import Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { handleBoundaryError } from './ErrorHandler';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../config/theme';
+// FIX 2: Sesuaikan path import theme.
+// Dari 'src/errors' mundur 2 langkah ke root, lalu ke 'constants/theme'
+import { COLORS, FONTS, SIZES, SHADOWS } from '../../constants/theme'; 
+
 /**
  * Error Boundary Component
  * Catches JavaScript errors in child component tree
@@ -26,12 +30,14 @@ class ErrorBoundary extends React.Component {
       errorInfo: null,
     };
   }
+
   /**
    * Update state when error is caught
    */
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
+
   /**
    * Log error information
    */
@@ -40,11 +46,13 @@ class ErrorBoundary extends React.Component {
     
     // Handle and log the error
     handleBoundaryError(error, errorInfo);
+
     // Call onError prop if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
   }
+
   /**
    * Reset error state
    */
@@ -54,11 +62,13 @@ class ErrorBoundary extends React.Component {
       error: null,
       errorInfo: null,
     });
+
     // Call onReset prop if provided
     if (this.props.onReset) {
       this.props.onReset();
     }
   };
+
   render() {
     const { hasError, error, errorInfo } = this.state;
     const { 
@@ -67,6 +77,7 @@ class ErrorBoundary extends React.Component {
       FallbackComponent,
       showDetails = __DEV__,
     } = this.props;
+
     if (hasError) {
       // Custom fallback component
       if (FallbackComponent) {
@@ -78,10 +89,12 @@ class ErrorBoundary extends React.Component {
           />
         );
       }
+
       // Custom fallback element
       if (fallback) {
         return fallback;
       }
+
       // Default fallback UI
       return (
         <DefaultErrorFallback
@@ -92,9 +105,11 @@ class ErrorBoundary extends React.Component {
         />
       );
     }
+
     return children;
   }
 }
+
 /**
  * Default Error Fallback Component
  */
@@ -111,6 +126,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
             <Ionicons name="warning" size={64} color={COLORS.secondary} />
           </View>
         </View>
+
         {/* Error Title */}
         <Text style={styles.title}>Oops! Terjadi Kesalahan</Text>
         
@@ -119,6 +135,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
           Aplikasi mengalami masalah yang tidak terduga. 
           Silakan coba lagi atau hubungi dukungan jika masalah berlanjut.
         </Text>
+
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -129,6 +146,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
             <Ionicons name="refresh" size={20} color={COLORS.white} />
             <Text style={styles.primaryButtonText}>Coba Lagi</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => {
@@ -141,6 +159,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
             <Text style={styles.secondaryButtonText}>Ke Beranda</Text>
           </TouchableOpacity>
         </View>
+
         {/* Error Details (Development Only) */}
         {showDetails && error && (
           <View style={styles.detailsContainer}>
@@ -151,6 +170,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
               <Ionicons name="code-slash" size={18} color={COLORS.gray} />
               <Text style={styles.detailsTitle}>Detail Error (Development)</Text>
             </TouchableOpacity>
+
             <View style={styles.errorBox}>
               <Text style={styles.errorName}>{error.name}</Text>
               <Text style={styles.errorMessage}>{error.message}</Text>
@@ -167,6 +187,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
                 </ScrollView>
               )}
             </View>
+
             {errorInfo?.componentStack && (
               <View style={styles.errorBox}>
                 <Text style={styles.errorName}>Component Stack</Text>
@@ -183,6 +204,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
             )}
           </View>
         )}
+
         {/* Support Contact */}
         <View style={styles.supportContainer}>
           <Text style={styles.supportText}>
@@ -193,6 +215,7 @@ const DefaultErrorFallback = ({ error, errorInfo, resetError, showDetails }) => 
     </SafeAreaView>
   );
 };
+
 /**
  * Minimal Error Fallback for smaller sections
  */
@@ -212,6 +235,7 @@ export const MinimalErrorFallback = ({ error, resetError, message }) => {
     </View>
   );
 };
+
 /**
  * Card Error Fallback for card components
  */
@@ -226,6 +250,7 @@ export const CardErrorFallback = ({ resetError, height = 150 }) => {
     </View>
   );
 };
+
 /**
  * HOC to wrap component with error boundary
  * @param {Component} WrappedComponent - Component to wrap
@@ -234,28 +259,35 @@ export const CardErrorFallback = ({ resetError, height = 150 }) => {
  */
 export const withErrorBoundary = (WrappedComponent, errorBoundaryProps = {}) => {
   const displayName = WrappedComponent.displayName || WrappedComponent.name || 'Component';
+  
   const WithErrorBoundary = (props) => (
     <ErrorBoundary {...errorBoundaryProps}>
       <WrappedComponent {...props} />
     </ErrorBoundary>
   );
+
   WithErrorBoundary.displayName = `withErrorBoundary(${displayName})`;
   return WithErrorBoundary;
 };
+
 /**
  * Hook alternative for functional components
  * Note: This is a workaround since hooks can't catch errors like class boundaries
  */
 export const useErrorHandler = () => {
   const [error, setError] = React.useState(null);
+
   const resetError = React.useCallback(() => {
     setError(null);
   }, []);
+
   const handleError = React.useCallback((err) => {
     setError(err);
   }, []);
+
   return { error, handleError, resetError };
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -374,7 +406,8 @@ const styles = StyleSheet.create({
     ...FONTS.regular,
     fontSize: 10,
     color: COLORS.gray,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    // FIX 1: Platform sekarang sudah didefinisikan
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
   },
   supportContainer: {
     marginTop: SIZES.medium,
@@ -426,4 +459,5 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 });
+
 export default ErrorBoundary;

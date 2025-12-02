@@ -3,7 +3,7 @@
  * API calls for user/profile management
  * @module services/api/user.api
  */
-import { apiService } from './api.service.js';
+import { apiService } from './api.services.js';
 import { ApiEndpoints, USE_MOCK_API, MOCK_API_DELAY } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
 /**

@@ -10,8 +10,56 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../../../config/theme';
+
+// --- THEME DEFINITIONS (Local Fix) ---
+// Mendefinisikan tema secara lokal karena modul config/theme hilang atau tidak kompatibel
+const COLORS = {
+  primary: '#3b82f6',   // Blue
+  secondary: '#ef4444', // Red
+  white: '#ffffff',
+  dark: '#111827',
+  gray: '#6b7280',
+  lightGray: '#f3f4f6',
+  border: '#e5e7eb',
+};
+
+const SIZES = {
+  base: 8,
+  small: 12,
+  font: 14,
+  medium: 16,
+  large: 20,
+  extraLarge: 24,
+  radius: 8,
+};
+
+const FONTS = {
+  bold: { fontWeight: '700' },
+  semiBold: { fontWeight: '600' },
+  medium: { fontWeight: '500' },
+  regular: { fontWeight: '400' },
+};
+
+const SHADOWS = {
+  small: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 2,
+  },
+  large: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.34,
+    shadowRadius: 6.27,
+    elevation: 10,
+  },
+};
+// -------------------------------------
+
 const { width } = Dimensions.get('window');
+
 const ConfirmationModal = ({
   visible,
   onClose,
@@ -30,6 +78,7 @@ const ConfirmationModal = ({
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
   // Type-based configurations
   const typeConfig = {
     default: {
@@ -53,10 +102,12 @@ const ConfirmationModal = ({
       confirmColor: COLORS.primary,
     },
   };
+
   const config = typeConfig[type] || typeConfig.default;
   const finalIcon = icon || config.icon;
   const finalIconColor = iconColor || config.iconColor;
   const finalConfirmColor = confirmColor || config.confirmColor;
+
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -72,6 +123,7 @@ const ConfirmationModal = ({
           useNativeDriver: true,
         }),
       ]).start();
+
       // Shake animation for warning/danger
       if (type === 'danger' || type === 'warning') {
         Animated.sequence([
@@ -88,6 +140,7 @@ const ConfirmationModal = ({
       shakeAnim.setValue(0);
     }
   }, [visible, type]);
+
   const handleClose = (callback) => {
     Animated.parallel([
       Animated.timing(scaleAnim, {
@@ -105,16 +158,19 @@ const ConfirmationModal = ({
       onClose && onClose();
     });
   };
+
   const handleConfirm = () => {
     if (!loading) {
       handleClose(onConfirm);
     }
   };
+
   const handleCancel = () => {
     if (!loading) {
       handleClose(onCancel);
     }
   };
+
   return (
     <Modal
       visible={visible}
@@ -158,10 +214,13 @@ const ConfirmationModal = ({
                   />
                 </View>
               </View>
+
               {/* Title */}
               <Text style={styles.title}>{title}</Text>
+
               {/* Message */}
               <Text style={styles.message}>{message}</Text>
+
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
@@ -172,6 +231,7 @@ const ConfirmationModal = ({
                 >
                   <Text style={styles.cancelButtonText}>{cancelText}</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[
                     styles.button, 
@@ -199,6 +259,7 @@ const ConfirmationModal = ({
     </Modal>
   );
 };
+
 // Specialized Confirmation Modals
 export const LogoutConfirmModal = ({ visible, onClose, onConfirm }) => (
   <ConfirmationModal
@@ -213,6 +274,7 @@ export const LogoutConfirmModal = ({ visible, onClose, onConfirm }) => (
     icon="log-out"
   />
 );
+
 export const DeleteReportConfirmModal = ({ visible, onClose, onConfirm }) => (
   <ConfirmationModal
     visible={visible}
@@ -226,6 +288,7 @@ export const DeleteReportConfirmModal = ({ visible, onClose, onConfirm }) => (
     icon="trash"
   />
 );
+
 export const SubmitReportConfirmModal = ({ visible, onClose, onConfirm, loading }) => (
   <ConfirmationModal
     visible={visible}
@@ -240,6 +303,7 @@ export const SubmitReportConfirmModal = ({ visible, onClose, onConfirm, loading 
     loading={loading}
   />
 );
+
 export const DiscardChangesConfirmModal = ({ visible, onClose, onConfirm }) => (
   <ConfirmationModal
     visible={visible}
@@ -253,6 +317,7 @@ export const DiscardChangesConfirmModal = ({ visible, onClose, onConfirm }) => (
     icon="close-circle"
   />
 );
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -339,4 +404,5 @@ const styles = StyleSheet.create({
     gap: SIZES.small,
   },
 });
+
 export default ConfirmationModal;

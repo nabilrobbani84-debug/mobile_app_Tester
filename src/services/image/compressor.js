@@ -3,7 +3,7 @@
  * Image compression with quality optimization
  * @module services/image/compressor
  */
-import { imageService } from './image.service.js';
+import { imageService } from './image.services.js';
 import { ImageUploadConstants } from '../../config/constants.js';
 import { Logger } from '../../utils/logger.js';
 /**

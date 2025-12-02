@@ -26,10 +26,18 @@ export const DashboardController = {
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'dashboard', isLoading: true });
 
             // Load data in parallel
-            const [reportsResponse, profileResponse] = await Promise.all([
+            // Note: We await Promise.allSettled to ensure one failure doesn't stop the other
+            const results = await Promise.allSettled([
                 this.loadRecentReports(),
                 this.refreshUserProfile()
             ]);
+
+            // Check if any request failed and log it (Optional)
+            results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                    Logger.warn(`⚠️ Dashboard partial load failed [Index ${index}]:`, result.reason);
+                }
+            });
 
             // Track page view
             analyticsService.trackPageView('dashboard');
@@ -56,30 +64,37 @@ export const DashboardController = {
     async loadRecentReports() {
         try {
             // Check cache first
-            const cachedReports = localStorageService.getReportsCache();
+            const cachedReports = await localStorageService.getReportsCache(); // Added await just in case
             
-            if (cachedReports && cachedReports.length > 0) {
+            if (cachedReports && Array.isArray(cachedReports) && cachedReports.length > 0) {
                 Logger.info('📦 Using cached reports');
                 store.dispatch(ActionTypes.REPORT_SET_LIST, cachedReports);
-                return;
+                // Return explicitly to stop execution, but don't prevent fetching fresh data if needed
+                // If you want "stale-while-revalidate" strategy, remove the return
+                return; 
             }
 
             // Fetch from API
             const response = await ReportAPI.getAll({ limit: 10 });
 
-            if (response.success && response.data.reports) {
+            // FIX: Added safer check for response.data
+            if (response && response.success && response.data) {
+                const reports = response.data.reports || [];
+
                 // Update state
-                store.dispatch(ActionTypes.REPORT_SET_LIST, response.data.reports);
+                store.dispatch(ActionTypes.REPORT_SET_LIST, reports);
 
                 // Cache reports
-                localStorageService.setReportsCache(response.data.reports);
+                localStorageService.setReportsCache(reports);
 
                 // Update HB trends if available
                 if (response.data.hb_trends) {
                     this.updateHBTrends(response.data.hb_trends);
                 }
 
-                Logger.info(`✅ Loaded ${response.data.reports.length} reports`);
+                Logger.info(`✅ Loaded ${reports.length} reports`);
+            } else {
+                Logger.warn('⚠️ Reports API returned empty or invalid data');
             }
 
         } catch (error) {
@@ -96,7 +111,7 @@ export const DashboardController = {
         try {
             const response = await UserAPI.getProfile();
 
-            if (response.success && response.data) {
+            if (response && response.success && response.data) {
                 // Update state
                 store.dispatch(ActionTypes.USER_SET_PROFILE, response.data);
 
@@ -129,8 +144,10 @@ export const DashboardController = {
             store.dispatch(ActionTypes.USER_UPDATE_HB, latestHB);
 
             // Cache trends
+            // FIX: Generate dynamic labels instead of hardcoded ['Nov', 'Des', ...]
+            // Or ensure trendsData matches the structure expected by the chart
             localStorageService.setHBTrendsCache({
-                labels: ['Nov', 'Des', 'Jan', 'Feb', 'Mar', 'Apr'],
+                labels: trendsData.map((_, i) => `Data ${i + 1}`), // Fallback labels
                 data: trendsData
             });
 
@@ -147,16 +164,32 @@ export const DashboardController = {
      */
     getDashboardSummary() {
         const state = store.getState();
-        const user = state.user;
+        
+        // FIX: Add safety check for state existence
+        if (!state || !state.user) {
+            return {
+                userName: 'Pengguna',
+                consumptionCount: 0,
+                consumptionTarget: 0,
+                consumptionPercentage: 0,
+                currentHB: 0,
+                hbTrend: 'stable',
+                recentReports: []
+            };
+        }
 
+        const user = state.user;
+        const reports = state.reports || { list: [] };
+
+        // FIX: Use Optional Chaining (?.) to prevent crashes if profile or vitaminConsumption is null
         return {
-            userName: user.profile.name,
-            consumptionCount: user.vitaminConsumption.count,
-            consumptionTarget: user.vitaminConsumption.target,
-            consumptionPercentage: user.vitaminConsumption.percentage,
-            currentHB: user.hemoglobin.current,
-            hbTrend: user.hemoglobin.trend,
-            recentReports: state.reports.list.slice(0, 5)
+            userName: user.profile?.name || 'Pengguna',
+            consumptionCount: user.vitaminConsumption?.count || 0,
+            consumptionTarget: user.vitaminConsumption?.target || 0,
+            consumptionPercentage: user.vitaminConsumption?.percentage || 0,
+            currentHB: user.hemoglobin?.current || 0,
+            hbTrend: user.hemoglobin?.trend || 'stable',
+            recentReports: Array.isArray(reports.list) ? reports.list.slice(0, 5) : []
         };
     },
 
@@ -166,10 +199,10 @@ export const DashboardController = {
     navigateToReportForm() {
         Logger.info('📝 Navigating to report form');
         
-        analyticsService.trackAction('navigate_report_form', 'dashboard');
-        
-        // Navigation will be handled by router
-        // This is just tracking
+        // FIX: Add safety check for analyticsService
+        if (analyticsService && typeof analyticsService.trackAction === 'function') {
+            analyticsService.trackAction('navigate_report_form', 'dashboard');
+        }
     },
 
     /**
@@ -178,9 +211,11 @@ export const DashboardController = {
     navigateToHealthTips() {
         Logger.info('💡 Navigating to health tips');
         
-        analyticsService.trackEvent(EventTypes.HEALTH_TIP_VIEW, {
-            source: 'dashboard'
-        });
+        if (analyticsService && typeof analyticsService.trackEvent === 'function') {
+            analyticsService.trackEvent(EventTypes.HEALTH_TIP_VIEW, {
+                source: 'dashboard'
+            });
+        }
     }
 };
 
