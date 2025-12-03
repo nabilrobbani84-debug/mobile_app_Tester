@@ -6,18 +6,17 @@
 import { apiService } from './api.services.js';
 import { ApiEndpoints, USE_MOCK_API, MOCK_API_DELAY } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
-/**
+
+/*
  * Mock User API
  */
 const MockUserAPI = {
-    /**
+    /*
      * Mock get profile
      */
     async getProfile() {
         await new Promise(resolve => setTimeout(resolve, 500));
-        
         Logger.info('🎭 Mock API: Get Profile');
-        
         return {
             success: true,
             data: {
@@ -41,14 +40,13 @@ const MockUserAPI = {
             }
         };
     },
+
     /**
      * Mock update profile
      */
     async updateProfile(data) {
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
         Logger.info('🎭 Mock API: Update Profile', data);
-        
         return {
             success: true,
             message: 'Profile updated successfully',
@@ -59,11 +57,12 @@ const MockUserAPI = {
         };
     }
 };
+
 /**
  * User API
  */
 export const UserAPI = {
-    /**
+    /*
      * Get user profile
      * @returns {Promise<object>} - Profile data
      */
@@ -71,12 +70,12 @@ export const UserAPI = {
         if (USE_MOCK_API) {
             return await MockUserAPI.getProfile();
         }
-        
         const endpoint = ApiEndpoints.user.getProfile;
         return await apiService.get(endpoint.url, {
             timeout: endpoint.timeout
         });
     },
+
     /**
      * Update user profile
      * @param {object} data - Profile data to update
@@ -86,11 +85,11 @@ export const UserAPI = {
         if (USE_MOCK_API) {
             return await MockUserAPI.updateProfile(data);
         }
-        
         const endpoint = ApiEndpoints.user.updateProfile;
         return await apiService.put(endpoint.url, data, {
             timeout: endpoint.timeout
         });
     }
 };
+
 export default UserAPI;

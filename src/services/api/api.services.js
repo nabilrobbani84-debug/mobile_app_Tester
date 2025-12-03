@@ -3,11 +3,19 @@
  * Core API service with HTTP methods and error handling
  * @module services/api/api.service
  */
-import { ApiEndpoints, API_BASE_URL, HttpStatus, HttpHeaders, ApiRequestConfig, ApiErrorMessages } from '../../config/api.config.js';
+import {
+    ApiEndpoints,
+    API_BASE_URL,
+    HttpStatus,
+    HttpHeaders,
+    ApiRequestConfig,
+    ApiErrorMessages
+} from '../../config/api.config.js';
 import { StorageKeys } from '../../config/storage.config.js';
 import { Logger } from '../../utils/logger.js';
 import { APIInterceptors } from './interceptors.js';
-/**
+
+/*
  * API Service Class
  * Handles all HTTP requests with interceptors and error handling
  */
@@ -17,15 +25,16 @@ export class APIService {
         this.defaultTimeout = ApiRequestConfig.timeout;
         this.cache = new Map();
         this.pendingRequests = new Map();
-        
+
         // Initialize interceptors
         this.requestInterceptors = [];
         this.responseInterceptors = [];
         this.errorInterceptors = [];
-        
+
         // Setup default interceptors
         this.setupDefaultInterceptors();
     }
+
     /**
      * Setup default interceptors
      */
@@ -34,16 +43,15 @@ export class APIService {
         this.addRequestInterceptor(APIInterceptors.addAuthToken);
         this.addRequestInterceptor(APIInterceptors.addCommonHeaders);
         this.addRequestInterceptor(APIInterceptors.logRequest);
-        
         // Response interceptors
         this.addResponseInterceptor(APIInterceptors.handleResponse);
         this.addResponseInterceptor(APIInterceptors.logResponse);
-        
         // Error interceptors
         this.addErrorInterceptor(APIInterceptors.handleError);
         this.addErrorInterceptor(APIInterceptors.handleUnauthorized);
         this.addErrorInterceptor(APIInterceptors.logError);
     }
+
     /**
      * Add request interceptor
      * @param {Function} interceptor - Interceptor function
@@ -51,21 +59,24 @@ export class APIService {
     addRequestInterceptor(interceptor) {
         this.requestInterceptors.push(interceptor);
     }
-    /**
+
+    /*
      * Add response interceptor
      * @param {Function} interceptor - Interceptor function
      */
     addResponseInterceptor(interceptor) {
         this.responseInterceptors.push(interceptor);
     }
-    /**
+
+    /*
      * Add error interceptor
      * @param {Function} interceptor - Interceptor function
      */
     addErrorInterceptor(interceptor) {
         this.errorInterceptors.push(interceptor);
     }
-    /**
+
+    /*
      * Build full URL
      * @param {string} endpoint - Endpoint path
      * @param {object} params - URL parameters
@@ -73,14 +84,13 @@ export class APIService {
      */
     buildURL(endpoint, params = {}) {
         let url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
-        
         // Replace URL parameters
         Object.keys(params).forEach(key => {
             url = url.replace(`:${key}`, params[key]);
         });
-        
         return url;
     }
+
     /**
      * Build query string
      * @param {object} params - Query parameters
@@ -88,7 +98,6 @@ export class APIService {
      */
     buildQueryString(params = {}) {
         const queryParams = new URLSearchParams();
-        
         Object.keys(params).forEach(key => {
             if (params[key] !== null && params[key] !== undefined) {
                 if (Array.isArray(params[key])) {
@@ -100,10 +109,10 @@ export class APIService {
                 }
             }
         });
-        
         const queryString = queryParams.toString();
         return queryString ? `?${queryString}` : '';
     }
+
     /**
      * Get cache key
      * @param {string} method - HTTP method
@@ -114,26 +123,25 @@ export class APIService {
     getCacheKey(method, url, data = {}) {
         return `${method}:${url}:${JSON.stringify(data)}`;
     }
-    /**
+
+    /*
      * Get cached response
      * @param {string} cacheKey - Cache key
      * @returns {object|null} - Cached response or null
      */
     getCachedResponse(cacheKey) {
         if (!ApiRequestConfig.cache.enabled) return null;
-        
         const cached = this.cache.get(cacheKey);
         if (!cached) return null;
-        
         const now = Date.now();
         if (now - cached.timestamp > ApiRequestConfig.cache.duration) {
             this.cache.delete(cacheKey);
             return null;
         }
-        
         Logger.debug('📦 Using cached response:', cacheKey);
         return cached.data;
     }
+
     /**
      * Set cached response
      * @param {string} cacheKey - Cache key
@@ -141,14 +149,13 @@ export class APIService {
      */
     setCachedResponse(cacheKey, data) {
         if (!ApiRequestConfig.cache.enabled) return;
-        
         this.cache.set(cacheKey, {
             data,
             timestamp: Date.now()
         });
-        
         Logger.debug('💾 Cached response:', cacheKey);
     }
+
     /**
      * Clear cache
      */
@@ -156,14 +163,14 @@ export class APIService {
         this.cache.clear();
         Logger.info('🗑️ API cache cleared');
     }
-    /**
+
+    /*
      * Apply request interceptors
      * @param {object} config - Request config
      * @returns {Promise<object>} - Modified config
      */
     async applyRequestInterceptors(config) {
         let modifiedConfig = { ...config };
-        
         for (const interceptor of this.requestInterceptors) {
             try {
                 modifiedConfig = await interceptor(modifiedConfig);
@@ -171,9 +178,9 @@ export class APIService {
                 Logger.error('❌ Request interceptor error:', error);
             }
         }
-        
         return modifiedConfig;
     }
+
     /**
      * Apply response interceptors
      * @param {object} response - Response object
@@ -181,7 +188,6 @@ export class APIService {
      */
     async applyResponseInterceptors(response) {
         let modifiedResponse = response;
-        
         for (const interceptor of this.responseInterceptors) {
             try {
                 modifiedResponse = await interceptor(modifiedResponse);
@@ -189,9 +195,9 @@ export class APIService {
                 Logger.error('❌ Response interceptor error:', error);
             }
         }
-        
         return modifiedResponse;
     }
+
     /**
      * Apply error interceptors
      * @param {Error} error - Error object
@@ -199,7 +205,6 @@ export class APIService {
      */
     async applyErrorInterceptors(error) {
         let modifiedError = error;
-        
         for (const interceptor of this.errorInterceptors) {
             try {
                 modifiedError = await interceptor(modifiedError);
@@ -207,9 +212,9 @@ export class APIService {
                 Logger.error('❌ Error interceptor error:', err);
             }
         }
-        
         return modifiedError;
     }
+
     /**
      * Make HTTP request
      * @param {object} config - Request configuration
@@ -219,12 +224,12 @@ export class APIService {
         try {
             // Apply request interceptors
             const modifiedConfig = await this.applyRequestInterceptors(config);
-            
+
             const { method, url, data, params, headers, timeout, cache } = modifiedConfig;
-            
+
             // Build full URL
             const fullURL = this.buildURL(url, params) + this.buildQueryString(modifiedConfig.query);
-            
+
             // Check cache for GET requests
             if (method === 'GET' && cache !== false) {
                 const cacheKey = this.getCacheKey(method, fullURL, data);
@@ -233,18 +238,18 @@ export class APIService {
                     return cachedResponse;
                 }
             }
-            
+
             // Check if same request is already pending (prevent duplicates)
             const requestKey = this.getCacheKey(method, fullURL, data);
             if (this.pendingRequests.has(requestKey)) {
                 Logger.debug('⏳ Request already pending, waiting...', requestKey);
                 return await this.pendingRequests.get(requestKey);
             }
-            
+
             // Create abort controller for timeout
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeout || this.defaultTimeout);
-            
+
             // Prepare fetch options
             const fetchOptions = {
                 method,
@@ -254,7 +259,7 @@ export class APIService {
                 },
                 signal: controller.signal
             };
-            
+
             // Add body for non-GET requests
             if (method !== 'GET' && method !== 'HEAD') {
                 if (data instanceof FormData) {
@@ -265,15 +270,15 @@ export class APIService {
                     fetchOptions.body = JSON.stringify(data);
                 }
             }
-            
+
             // Make request and store in pending requests
             const requestPromise = fetch(fullURL, fetchOptions)
                 .then(async (response) => {
                     clearTimeout(timeoutId);
-                    
+
                     // Parse response
                     const responseData = await this.parseResponse(response);
-                    
+
                     // Check if response is ok
                     if (!response.ok) {
                         throw {
@@ -283,7 +288,7 @@ export class APIService {
                             response
                         };
                     }
-                    
+
                     // Apply response interceptors
                     const modifiedResponse = await this.applyResponseInterceptors({
                         data: responseData,
@@ -292,24 +297,24 @@ export class APIService {
                         headers: response.headers,
                         config: modifiedConfig
                     });
-                    
+
                     // Cache GET requests
                     if (method === 'GET' && cache !== false) {
                         const cacheKey = this.getCacheKey(method, fullURL, data);
                         this.setCachedResponse(cacheKey, modifiedResponse.data);
                     }
-                    
+
                     return modifiedResponse.data;
                 })
                 .catch(async (error) => {
                     clearTimeout(timeoutId);
-                    
+
                     // Handle abort (timeout)
                     if (error.name === 'AbortError') {
                         error.isTimeout = true;
                         error.message = ApiErrorMessages.TIMEOUT_ERROR;
                     }
-                    
+
                     // Apply error interceptors
                     const modifiedError = await this.applyErrorInterceptors(error);
                     throw modifiedError;
@@ -318,17 +323,18 @@ export class APIService {
                     // Remove from pending requests
                     this.pendingRequests.delete(requestKey);
                 });
-            
+
             // Store in pending requests
             this.pendingRequests.set(requestKey, requestPromise);
-            
+
             return await requestPromise;
-            
+
         } catch (error) {
             Logger.error('❌ API Request failed:', error);
             throw error;
         }
     }
+
     /**
      * Parse response
      * @param {Response} response - Fetch response
@@ -336,7 +342,6 @@ export class APIService {
      */
     async parseResponse(response) {
         const contentType = response.headers.get('content-type');
-        
         if (contentType && contentType.includes('application/json')) {
             return await response.json();
         } else if (contentType && contentType.includes('text/')) {
@@ -347,6 +352,7 @@ export class APIService {
             return await response.blob();
         }
     }
+
     /**
      * GET request
      * @param {string} url - URL
@@ -360,7 +366,8 @@ export class APIService {
             ...config
         });
     }
-    /**
+
+    /*
      * POST request
      * @param {string} url - URL
      * @param {object} data - Request data
@@ -376,7 +383,8 @@ export class APIService {
             ...config
         });
     }
-    /**
+
+    /*
      * PUT request
      * @param {string} url - URL
      * @param {object} data - Request data
@@ -392,7 +400,8 @@ export class APIService {
             ...config
         });
     }
-    /**
+
+    /*
      * PATCH request
      * @param {string} url - URL
      * @param {object} data - Request data
@@ -408,7 +417,8 @@ export class APIService {
             ...config
         });
     }
-    /**
+
+    /*
      * DELETE request
      * @param {string} url - URL
      * @param {object} config - Request config
@@ -422,7 +432,8 @@ export class APIService {
             ...config
         });
     }
-    /**
+
+    /*
      * Upload file
      * @param {string} url - URL
      * @param {FormData} formData - Form data with file
@@ -439,7 +450,8 @@ export class APIService {
             ...config
         });
     }
-    /**
+
+    /*
      * Download file
      * @param {string} url - URL
      * @param {object} config - Request config
@@ -452,9 +464,9 @@ export class APIService {
             cache: false,
             ...config
         });
-        
         return response;
     }
+
     /**
      * Check if online
      * @returns {boolean}
@@ -462,14 +474,16 @@ export class APIService {
     isOnline() {
         return navigator.onLine;
     }
-    /**
+
+    /*
      * Get pending requests count
      * @returns {number}
      */
     getPendingRequestsCount() {
         return this.pendingRequests.size;
     }
-    /**
+
+    /*
      * Cancel all pending requests
      */
     cancelAllRequests() {
@@ -477,6 +491,7 @@ export class APIService {
         Logger.info('🚫 All pending requests cancelled');
     }
 }
+
 /**
  * Create singleton instance
  */
