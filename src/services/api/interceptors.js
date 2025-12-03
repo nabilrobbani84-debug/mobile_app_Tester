@@ -1,305 +1,181 @@
+// File: src/services/api/interceptors.js
 /**
  * Modiva - API Interceptors
- * Request, response, and error interceptors
+ * Request/Response interceptors for API service
  * @module services/api/interceptors
  */
-import { StorageKeys } from '../../config/storage.config.js';
-import { HttpStatus, ApiErrorMessages } from '../../config/api.config.js';
-import { AppConfig } from '../../config/app.config.js';
 import { Logger } from '../../utils/logger.js';
+import { HttpStatus, ApiErrorMessages } from '../../config/api.config.js';
+
+// Storage service for tokens
+const StorageService = {
+  getToken: () => localStorage.getItem('auth_token'),
+  getRefreshToken: () => localStorage.getItem('refresh_token'),
+  setToken: (token) => localStorage.setItem('auth_token', token),
+  clearTokens: () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+  }
+};
+
 /**
- * API Interceptors
+ * Request Interceptors
+ */
+export const RequestInterceptors = {
+  /**
+   * Add authentication token to request
+   */
+  addAuthToken: async (config) => {
+    const token = StorageService.getToken();
+    if (token && config.requiresAuth !== false) {
+      config.headers = {
+        ...config.headers,
+        'Authorization': `Bearer ${token}`
+      };
+    }
+    return config;
+  },
+  
+  /**
+   * Add common headers
+   */
+  addCommonHeaders: async (config) => {
+    config.headers = {
+      'Content-Type': config.contentType || 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-App-Version': process.env.REACT_APP_VERSION || '1.0.0',
+      ...config.headers
+    };
+    return config;
+  },
+  
+  /**
+   * Log request
+   */
+  logRequest: async (config) => {
+    Logger.apiRequest(config.method, config.url, config.data);
+    return config;
+  }
+};
+
+/**
+ * Response Interceptors
+ */
+export const ResponseInterceptors = {
+  /**
+   * Handle response
+   */
+  handleResponse: async (response) => {
+    // Check if response has standard structure
+    if (response.data && typeof response.data === 'object') {
+      // Handle paginated responses
+      if (response.data.data !== undefined && response.data.meta !== undefined) {
+        response.data = {
+          items: response.data.data,
+          meta: response.data.meta,
+          success: true
+        };
+      }
+      
+      // Add success flag if not present
+      if (response.data.success === undefined) {
+        response.data.success = true;
+      }
+    }
+    
+    return response;
+  },
+  
+  /**
+   * Log response
+   */
+  logResponse: async (response) => {
+    Logger.apiResponse(response.data, 0); // Duration would be calculated in service
+    return response;
+  }
+};
+
+/**
+ * Error Interceptors
+ */
+export const ErrorInterceptors = {
+  /**
+   * Handle error
+   */
+  handleError: async (error) => {
+    if (!error) {
+      return new Error(ApiErrorMessages.UNKNOWN_ERROR);
+    }
+    
+    // Network error
+    if (error.message === 'Failed to fetch') {
+      error.message = ApiErrorMessages.NETWORK_ERROR;
+      error.code = 'NETWORK_ERROR';
+    }
+    
+    // Timeout error
+    if (error.isTimeout) {
+      error.message = ApiErrorMessages.TIMEOUT_ERROR;
+      error.code = 'TIMEOUT_ERROR';
+    }
+    
+    // HTTP error
+    if (error.status) {
+      error.message = ApiErrorMessages[error.status] || 
+                     error.data?.message || 
+                     ApiErrorMessages.UNKNOWN_ERROR;
+      error.code = `HTTP_${error.status}`;
+    }
+    
+    return error;
+  },
+  
+  /**
+   * Handle unauthorized access
+   */
+  handleUnauthorized: async (error) => {
+    if (error.status === HttpStatus.UNAUTHORIZED) {
+      Logger.warn('Unauthorized access detected');
+      
+      // Clear invalid tokens
+      StorageService.clearTokens();
+      
+      // Redirect to login page if in browser environment
+      if (typeof window !== 'undefined') {
+        // Dispatch event for auth layer to handle
+        const event = new CustomEvent('auth:unauthorized', {
+          detail: { error }
+        });
+        window.dispatchEvent(event);
+        
+        // If no listener handles it, redirect after delay
+        setTimeout(() => {
+          if (window.location.pathname !== '/login') {
+            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+          }
+        }, 1000);
+      }
+    }
+    return error;
+  },
+  
+  /**
+   * Log error
+   */
+  logError: async (error) => {
+    Logger.apiError(error, 'API Request Failed');
+    return error;
+  }
+};
+
+/**
+ * Combine all interceptors
  */
 export const APIInterceptors = {
-    /**
-     * Add authentication token to request
-     * @param {object} config - Request config
-     * @returns {object} - Modified config
-     */
-    addAuthToken(config) {
-        const token = localStorage.getItem(StorageKeys.auth.token);
-        
-        if (token && !config.headers?.['Authorization']) {
-            config.headers = {
-                ...config.headers,
-                'Authorization': `Bearer ${token}`
-            };
-        }
-        
-        return config;
-    },
-    /**
-     * Add common headers
-     * @param {object} config - Request config
-     * @returns {object} - Modified config
-     */
-    addCommonHeaders(config) {
-        config.headers = {
-            ...config.headers,
-            'X-App-Name': AppConfig.app.name,
-            'X-App-Version': AppConfig.app.version,
-            'X-Platform': 'web',
-            'X-Device-Id': APIInterceptors.getDeviceId()
-        };
-        
-        return config;
-    },
-    /**
-     * Log request
-     * @param {object} config - Request config
-     * @returns {object} - Config
-     */
-    logRequest(config) {
-        if (AppConfig.logging.logApi) {
-            Logger.debug('🔄 API Request:', {
-                method: config.method,
-                url: config.url,
-                data: config.data,
-                headers: config.headers
-            });
-        }
-        
-        return config;
-    },
-    /**
-     * Handle response
-     * @param {object} response - Response object
-     * @returns {object} - Response
-     */
-    handleResponse(response) {
-        // Transform response if needed
-        if (response.data && typeof response.data === 'object') {
-            // Add metadata
-            response.data._metadata = {
-                status: response.status,
-                timestamp: new Date().toISOString()
-            };
-        }
-        
-        return response;
-    },
-    /**
-     * Log response
-     * @param {object} response - Response object
-     * @returns {object} - Response
-     */
-    logResponse(response) {
-        if (AppConfig.logging.logApi) {
-            Logger.debug('✅ API Response:', {
-                status: response.status,
-                data: response.data
-            });
-        }
-        
-        return response;
-    },
-    /**
-     * Handle error
-     * @param {Error} error - Error object
-     * @returns {Error} - Error
-     */
-    handleError(error) {
-        // Add user-friendly message
-        if (error.status) {
-            error.userMessage = ApiErrorMessages[error.status] || ApiErrorMessages.UNKNOWN_ERROR;
-        } else if (error.isTimeout) {
-            error.userMessage = ApiErrorMessages.TIMEOUT_ERROR;
-        } else if (!navigator.onLine) {
-            error.userMessage = ApiErrorMessages.NETWORK_ERROR;
-        } else {
-            error.userMessage = ApiErrorMessages.UNKNOWN_ERROR;
-        }
-        
-        return error;
-    },
-    /**
-     * Handle unauthorized (401) responses
-     * @param {Error} error - Error object
-     * @returns {Error} - Error
-     */
-    handleUnauthorized(error) {
-        if (error.status === HttpStatus.UNAUTHORIZED) {
-            Logger.warn('⚠️ Unauthorized - clearing auth and redirecting to login');
-            
-            // Clear authentication
-            localStorage.removeItem(StorageKeys.auth.token);
-            localStorage.removeItem(StorageKeys.auth.refreshToken);
-            localStorage.removeItem(StorageKeys.auth.tokenExpiry);
-            
-            // Redirect to login (will be handled by router)
-            setTimeout(() => {
-                if (typeof window !== 'undefined') {
-                    // Router.navigate('/login');
-                    window.location.href = '/login';
-                }
-            }, 100);
-        }
-        
-        return error;
-    },
-    /**
-     * Log error
-     * @param {Error} error - Error object
-     * @returns {Error} - Error
-     */
-    logError(error) {
-        if (AppConfig.logging.logErrors) {
-            Logger.error('❌ API Error:', {
-                status: error.status,
-                message: error.message,
-                userMessage: error.userMessage,
-                data: error.data
-            });
-        }
-        
-        return error;
-    },
-    /**
-     * Get or create device ID
-     * @returns {string} - Device ID
-     */
-    getDeviceId() {
-        const key = 'modiva_device_id';
-        let deviceId = localStorage.getItem(key);
-        
-        if (!deviceId) {
-            deviceId = APIInterceptors.generateDeviceId();
-            localStorage.setItem(key, deviceId);
-        }
-        
-        return deviceId;
-    },
-    /**
-     * Generate device ID
-     * @returns {string} - Generated ID
-     */
-    generateDeviceId() {
-        return 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    },
-    /**
-     * Retry interceptor
-     * @param {Error} error - Error object
-     * @param {object} config - Request config
-     * @returns {Promise} - Retry promise
-     */
-    async retry(error, config) {
-        const retryConfig = AppConfig.performance.apiRetry;
-        
-        // Check if should retry
-        if (!retryConfig.retryableStatuses.includes(error.status)) {
-            throw error;
-        }
-        
-        // Check retry count
-        config._retryCount = config._retryCount || 0;
-        if (config._retryCount >= retryConfig.maxAttempts) {
-            throw error;
-        }
-        
-        // Increment retry count
-        config._retryCount++;
-        
-        // Calculate delay
-        let delay = retryConfig.delay;
-        if (retryConfig.backoff === 'exponential') {
-            delay = delay * Math.pow(2, config._retryCount - 1);
-        }
-        
-        Logger.info(`🔄 Retrying request (attempt ${config._retryCount}/${retryConfig.maxAttempts})...`);
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
-        // Retry request
-        return config;
-    }
+  ...RequestInterceptors,
+  ...ResponseInterceptors,
+  ...ErrorInterceptors
 };
-/**
- * Request Interceptor Manager
- */
-export class RequestInterceptorManager {
-    constructor() {
-        this.interceptors = [];
-    }
-    /**
-     * Use interceptor
-     * @param {Function} onFulfilled - Fulfilled handler
-     * @param {Function} onRejected - Rejected handler
-     * @returns {number} - Interceptor ID
-     */
-    use(onFulfilled, onRejected) {
-        this.interceptors.push({
-            fulfilled: onFulfilled,
-            rejected: onRejected
-        });
-        return this.interceptors.length - 1;
-    }
-    /**
-     * Eject interceptor
-     * @param {number} id - Interceptor ID
-     */
-    eject(id) {
-        if (this.interceptors[id]) {
-            this.interceptors[id] = null;
-        }
-    }
-    /**
-     * Apply interceptors
-     * @param {object} config - Request config
-     * @returns {Promise<object>} - Modified config
-     */
-    async apply(config) {
-        let chain = Promise.resolve(config);
-        this.interceptors.forEach(interceptor => {
-            if (interceptor !== null) {
-                chain = chain.then(interceptor.fulfilled, interceptor.rejected);
-            }
-        });
-        return chain;
-    }
-}
-/**
- * Response Interceptor Manager
- */
-export class ResponseInterceptorManager {
-    constructor() {
-        this.interceptors = [];
-    }
-    /**
-     * Use interceptor
-     * @param {Function} onFulfilled - Fulfilled handler
-     * @param {Function} onRejected - Rejected handler
-     * @returns {number} - Interceptor ID
-     */
-    use(onFulfilled, onRejected) {
-        this.interceptors.push({
-            fulfilled: onFulfilled,
-            rejected: onRejected
-        });
-        return this.interceptors.length - 1;
-    }
-    /**
-     * Eject interceptor
-     * @param {number} id - Interceptor ID
-     */
-    eject(id) {
-        if (this.interceptors[id]) {
-            this.interceptors[id] = null;
-        }
-    }
-    /**
-     * Apply interceptors
-     * @param {object} response - Response object
-     * @returns {Promise<object>} - Modified response
-     */
-    async apply(response) {
-        let chain = Promise.resolve(response);
-        this.interceptors.forEach(interceptor => {
-            if (interceptor !== null) {
-                chain = chain.then(interceptor.fulfilled, interceptor.rejected);
-            }
-        });
-        return chain;
-    }
-}
+
 export default APIInterceptors;

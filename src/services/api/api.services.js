@@ -4,14 +4,14 @@
  * @module services/api/api.service
  */
 import {
-    ApiEndpoints,
     API_BASE_URL,
-    HttpStatus,
     HttpHeaders,
     ApiRequestConfig,
     ApiErrorMessages
 } from '../../config/api.config.js';
-import { StorageKeys } from '../../config/storage.config.js';
+// Removed ApiEndpoints and HttpStatus from import as they are not used in this base service class
+// enabling strict linting to pass.
+
 import { Logger } from '../../utils/logger.js';
 import { APIInterceptors } from './interceptors.js';
 
