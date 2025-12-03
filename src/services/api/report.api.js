@@ -3,7 +3,7 @@
  * API calls for report management
  * @module services/api/report.api
  */
-import { apiService } from './api.service.js';
+import { apiService } from './api.services';
 import { ApiEndpoints, USE_MOCK_API, MOCK_API_DELAY } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
 /**

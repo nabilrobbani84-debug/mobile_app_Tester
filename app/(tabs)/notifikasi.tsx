@@ -1,112 +1,203 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  Dimensions
+} from 'react-native';
+import { Ionicons, Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+// --- Constants & Theme ---
+const COLORS = {
+  background: '#FDFDFD', // Putih bersih
+  textPrimary: '#1A1A1A', // Hitam judul
+  textSecondary: '#6ECCA9', // Hijau Mint untuk tanggal/waktu
+  iconBackground: '#EBF6F2', // Background kotak ikon (Mint sangat muda)
+  iconColor: '#2D3436', // Warna ikon (Hitam pudar)
+};
 
-export default function TabTwoScreen() {
+// --- Mock Data ---
+const NOTIFICATIONS_DATA = [
+  {
+    id: '1',
+    title: 'Vitamin Intake Reminder',
+    time: 'Today, 10:00 AM',
+    type: 'reminder', 
+  },
+  {
+    id: '2',
+    title: 'Motivational Message',
+    time: 'Yesterday, 2:30 PM',
+    type: 'message', 
+  },
+  {
+    id: '3',
+    title: 'Vitamin Intake Reminder',
+    time: '2 days ago, 9:15 AM',
+    type: 'reminder',
+  },
+  {
+    id: '4',
+    title: 'Motivational Message',
+    time: '3 days ago, 11:45 AM',
+    type: 'message',
+  },
+  {
+    id: '5',
+    title: 'Vitamin Intake Reminder',
+    time: '4 days ago, 1:00 PM',
+    type: 'reminder',
+  },
+  {
+    id: '6',
+    title: 'Health Checkup',
+    time: 'Last week, 09:00 AM',
+    type: 'reminder',
+  },
+];
+
+// --- Components ---
+
+const Header = () => {
+  const router = useRouter();
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+    <View style={styles.headerContainer}>
+      <TouchableOpacity 
+        style={styles.backButton} 
+        onPress={() => {
+            if (router.canGoBack()) {
+                router.back();
+            }
+        }}
+      >
+        <Feather name="arrow-left" size={24} color={COLORS.textPrimary} />
+      </TouchableOpacity>
+      
+      <Text style={styles.headerTitle}>Notifications</Text>
+      
+      {/* Dummy View untuk menyeimbangkan layout */}
+      <View style={{ width: 40 }} /> 
+    </View>
+  );
+};
+
+const NotificationItem = ({ item }) => {
+  const getIcon = () => {
+    if (item.type === 'message') {
+      return <Feather name="heart" size={22} color={COLORS.iconColor} />;
+    }
+    return <Feather name="bell" size={22} color={COLORS.iconColor} />;
+  };
+
+  return (
+    <TouchableOpacity style={styles.itemContainer} activeOpacity={0.7}>
+      {/* Icon Box */}
+      <View style={styles.iconBox}>
+        {getIcon()}
+      </View>
+
+      {/* Text Content */}
+      <View style={styles.textContainer}>
+        <Text style={styles.itemTitle}>{item.title}</Text>
+        <Text style={styles.itemTime}>{item.time}</Text>
+      </View>
+
+      {/* Right Arrow */}
+      <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
+    </TouchableOpacity>
+  );
+};
+
+// --- Main Screen ---
+
+export default function NotificationScreen() {
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      <Header />
+
+      <View style={styles.contentContainer}>
+        <FlatList
+          data={NOTIFICATIONS_DATA}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <NotificationItem item={item} />}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
-  titleContainer: {
+  contentContainer: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+
+  // Header Styles
+  headerContainer: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: COLORS.background,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.3,
+  },
+
+  // List Item Styles
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  iconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: COLORS.iconBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  itemTime: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
 });
