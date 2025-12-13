@@ -1,258 +1,181 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
   TouchableOpacity, 
-  RefreshControl,
   Alert,
-  ActivityIndicator,
-  Platform,
-  Image
+  StatusBar
 } from 'react-native';
-import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
-// Import Controller & Utils
-import ProfileController from '../../controllers/profile.controller';
-import AuthController from '../../controllers/auth.controller'; // Pastikan export default ada
-import Logger from '../../utils/logger';
+// Mock Data
+const MOCK_USER = {
+  name: 'Aisyah Putri',
+  email: 'aisyah.putri@sekolah.id',
+  school: 'SMA Negeri 1 Jakarta',
+  avatar_initial: 'A',
+  stats: {
+    height: 160,
+    weight: 50,
+    hb: 12.5,
+    consumption: '8/48'
+  }
+};
 
 const ProfileScreen = () => {
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  
-  // State untuk data tampilan
-  const [stats, setStats] = useState({
-    name: '',
-    email: '',
-    school: '',
-    nisn: '',
-    height: 0,
-    weight: 0,
-    currentHB: 0,
-    consumptionCount: 0,
-    consumptionTarget: 48,
-    initial: 'U'
-  });
-
-  // Fungsi memuat data profil
-  const loadProfileData = async (isRefresh = false) => {
-    if (!isRefresh) setLoading(true);
-    
-    try {
-      // 1. Panggil Controller untuk fetch data terbaru
-      await ProfileController.loadProfile();
-      
-      // 2. Ambil data terformat dari controller
-      const data = ProfileController.getUserStatistics();
-      setStats(data);
-      
-    } catch (error) {
-      Logger.error('❌ UI Error loading profile:', error);
-      // Alert hanya muncul jika bukan refresh background
-      if (!isRefresh) Alert.alert('Gagal', 'Tidak dapat memuat data profil.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  // Dipanggil saat layar fokus (dibuka)
-  useFocusEffect(
-    useCallback(() => {
-      loadProfileData();
-    }, [])
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadProfileData(true);
-  };
+  const router = useRouter();
+  const [user] = useState(MOCK_USER);
 
   const handleLogout = () => {
     Alert.alert(
-      'Keluar Aplikasi',
-      'Apakah Anda yakin ingin keluar dari akun ini?',
+      "Keluar", 
+      "Apakah Anda yakin ingin keluar?",
       [
-        { text: 'Batal', style: 'cancel' },
+        { text: "Batal", style: "cancel" },
         { 
-          text: 'Keluar', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await AuthController.logout();
-              router.replace('/login');
-            } catch (error) {
-              Logger.error('Logout failed', error);
-              Alert.alert('Error', 'Gagal logout. Silakan coba lagi.');
-              setLoading(false);
-            }
-          }
+          text: "Keluar", 
+          style: "destructive", 
+          onPress: () => router.replace('/login') 
         }
       ]
     );
   };
 
-  const handleEditProfile = () => {
-    // Navigasi ke halaman edit (pastikan route ini ada)
-    // router.push('/edit-profile'); 
-    Alert.alert('Coming Soon', 'Fitur Edit Profil sedang dalam pengembangan.');
-  };
-
-  // Loading State Utama
-  if (loading && !refreshing && !stats.name) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
-        <Text style={styles.loadingText}>Memuat Profil...</Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
-            colors={['#0a7ea4']} 
-            tintColor="#0a7ea4"
-        />
-      }
-    >
-      {/* Header Profile Section */}
-      <View style={styles.headerSection}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>
-              {stats.initial || 'U'}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.editIconBtn} 
-            onPress={handleEditProfile}
-            activeOpacity={0.8}
-          >
-             <Ionicons name="camera" size={14} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        
-        <Text style={styles.nameText} numberOfLines={1}>
-            {stats.name || 'Pengguna Modiva'}
-        </Text>
-        <Text style={styles.emailText}>{stats.email}</Text>
-        
-        <View style={styles.badgeContainer}>
-            <Badge icon="school-outline" text={stats.school} />
-            <Badge icon="id-card-outline" text={stats.nisn} />
-        </View>
-      </View>
-
-      {/* Data Kesehatan Grid */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Statistik Kesehatan</Text>
-        <View style={styles.statsGrid}>
-          <StatCard 
-            label="Tinggi" 
-            value={`${stats.height} cm`} 
-            icon="resize-outline"
-            color="#4CAF50"
-          />
-          <StatCard 
-            label="Berat" 
-            value={`${stats.weight} kg`} 
-            icon="body-outline"
-            color="#FF9800"
-          />
-          <StatCard 
-            label="Hb" 
-            value={`${stats.currentHB} g/dL`} 
-            icon="water-outline"
-            color="#F44336"
-          />
-           <StatCard 
-            label="TTD" 
-            value={`${stats.consumptionCount}/${stats.consumptionTarget}`} 
-            icon="medkit-outline"
-            color="#2196F3"
-          />
-        </View>
-      </View>
-
-      {/* Menu Options */}
-      <View style={styles.menuContainer}>
-        <MenuItem 
-          icon="person-outline" 
-          text="Edit Data Diri" 
-          onPress={handleEditProfile} 
-        />
-        <MenuItem 
-          icon="settings-outline" 
-          text="Pengaturan Aplikasi" 
-          onPress={() => Alert.alert('Info', 'Pengaturan belum tersedia')} 
-        />
-        <MenuItem 
-          icon="help-circle-outline" 
-          text="Bantuan & Dukungan" 
-          onPress={() => Alert.alert('Info', 'Hubungi admin@modiva.app')} 
-        />
-        <MenuItem 
-          icon="log-out-outline" 
-          text="Keluar Aplikasi" 
-          isDestructive 
-          onPress={handleLogout} 
-          hideBorder
-        />
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
       
-      {/* Spacer agar konten tidak tertutup bottom tab */}
-      <View style={{ height: 100 }} />
-    </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header Section */}
+        <View style={styles.headerWrapper}>
+          <LinearGradient
+            colors={['#3b82f6', '#1d4ed8']}
+            style={styles.headerGradient}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>{user.avatar_initial}</Text>
+                <TouchableOpacity style={styles.editAvatarButton}>
+                  <Ionicons name="camera" size={16} color="#3b82f6" />
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
+              
+              <View style={styles.schoolBadge}>
+                <Ionicons name="school-outline" size={14} color="white" />
+                <Text style={styles.schoolText}>{user.school}</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
+        <View style={styles.bodyContent}>
+          {/* Statistik Kesehatan */}
+          <Text style={styles.sectionTitle}>Statistik Kesehatan</Text>
+          <View style={styles.statsGrid}>
+            <StatCard 
+              label="Tinggi Badan" 
+              value={`${user.stats.height} cm`} 
+              icon="resize-outline" 
+              color="#10b981" 
+            />
+            <StatCard 
+              label="Berat Badan" 
+              value={`${user.stats.weight} kg`} 
+              icon="scale-outline" 
+              color="#f59e0b" 
+            />
+            <StatCard 
+              label="Hemoglobin" 
+              value={`${user.stats.hb} g/dL`} 
+              icon="water-outline" 
+              color="#ef4444" 
+            />
+            <StatCard 
+              label="Target TTD" 
+              value={user.stats.consumption} 
+              icon="medkit-outline" 
+              color="#3b82f6" 
+            />
+          </View>
+
+          {/* Menu Pengaturan Akun (Tanpa Report Form) */}
+          <Text style={styles.sectionTitle}>Pengaturan Akun</Text>
+          <View style={styles.menuContainer}>
+            <MenuItem 
+              icon="person-outline" 
+              label="Edit Profil" 
+              onPress={() => Alert.alert('Info', 'Fitur Edit Profil')} 
+            />
+            <MenuItem 
+              icon="lock-closed-outline" 
+              label="Ubah Kata Sandi" 
+              onPress={() => Alert.alert('Info', 'Fitur Ubah Password')} 
+            />
+            <MenuItem 
+              icon="notifications-outline" 
+              label="Notifikasi" 
+              onPress={() => router.push('/(tabs)/notifikasi')} 
+            />
+            <MenuItem 
+              icon="help-circle-outline" 
+              label="Bantuan" 
+              onPress={() => Alert.alert('Info', 'Hubungi Admin')} 
+            />
+            
+            <View style={styles.divider} />
+            
+            <MenuItem 
+              icon="log-out-outline" 
+              label="Keluar" 
+              isDestructive 
+              onPress={handleLogout} 
+            />
+          </View>
+          
+          <Text style={styles.versionText}>Versi Aplikasi 1.0.0</Text>
+          <View style={{ height: 100 }} />
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
-// --- Sub Components ---
-
-const Badge = ({ icon, text }) => (
-    <View style={styles.badge}>
-        <Ionicons name={icon} size={12} color="#666" />
-        <Text style={styles.badgeText} numberOfLines={1}>{text}</Text>
-    </View>
-);
+// --- Sub-components ---
 
 const StatCard = ({ label, value, icon, color }) => (
   <View style={styles.statCard}>
-    <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
-      <Ionicons name={icon} size={22} color={color} />
+    <View style={[styles.iconBox, { backgroundColor: `${color}20` }]}>
+      <Ionicons name={icon} size={24} color={color} />
     </View>
-    <View style={styles.statContent}>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+    <View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   </View>
 );
 
-const MenuItem = ({ icon, text, onPress, isDestructive, hideBorder }) => (
-  <TouchableOpacity 
-    style={[styles.menuItem, !hideBorder && styles.menuItemBorder]} 
-    onPress={onPress}
-    activeOpacity={0.7}
-  >
+const MenuItem = ({ icon, label, onPress, isDestructive }) => (
+  <TouchableOpacity style={styles.menuItem} onPress={onPress}>
     <View style={styles.menuLeft}>
-      <View style={[styles.menuIconBox, isDestructive && { backgroundColor: '#FF3B3015' }]}>
-        <Ionicons name={icon} size={20} color={isDestructive ? '#FF3B30' : '#555'} />
+      <View style={[styles.menuIconBox, isDestructive && styles.destructiveIconBox]}>
+        <Ionicons 
+          name={icon} 
+          size={22} 
+          color={isDestructive ? '#ef4444' : '#4b5563'} 
+        />
       </View>
-      <Text style={[styles.menuText, isDestructive && { color: '#FF3B30' }]}>
-        {text}
+      <Text style={[styles.menuLabel, isDestructive && styles.destructiveText]}>
+        {label}
       </Text>
     </View>
-    <Ionicons name="chevron-forward" size={18} color="#ccc" />
+    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
   </TouchableOpacity>
 );
 
@@ -261,188 +184,174 @@ const MenuItem = ({ icon, text, onPress, isDestructive, hideBorder }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#f3f4f6',
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
-    fontSize: 14,
-  },
-  headerSection: {
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 30,
+  headerWrapper: {
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    marginBottom: 20,
-    // Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
     elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerGradient: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    alignItems: 'center',
+  },
+  headerContent: {
+    alignItems: 'center',
   },
   avatarContainer: {
-    marginBottom: 15,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 16,
     position: 'relative',
   },
-  avatarPlaceholder: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#E1F5FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#0a7ea4',
-  },
   avatarText: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: 'bold',
-    color: '#0a7ea4',
+    color: '#3b82f6',
   },
-  editIconBtn: {
+  editAvatarButton: {
     position: 'absolute',
     bottom: 0,
-    right: -5,
-    backgroundColor: '#0a7ea4',
+    right: 0,
+    backgroundColor: '#fff',
     padding: 8,
     borderRadius: 20,
-    borderWidth: 3,
-    borderColor: '#fff',
+    elevation: 2,
   },
-  nameText: {
-    fontSize: 20,
+  userName: {
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: 'white',
     marginBottom: 4,
-    paddingHorizontal: 20,
-    textAlign: 'center',
   },
-  emailText: {
+  userEmail: {
     fontSize: 14,
-    color: '#888',
-    marginBottom: 15,
+    color: '#dbeafe',
+    marginBottom: 12,
   },
-  badgeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-  },
-  badge: {
+  schoolBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 15,
-    gap: 6,
+    borderRadius: 20,
   },
-  badgeText: {
+  schoolText: {
+    color: 'white',
     fontSize: 12,
-    color: '#555',
+    marginLeft: 6,
     fontWeight: '500',
-    maxWidth: 150,
   },
-  sectionContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 25,
+  bodyContent: {
+    padding: 20,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 15,
-    color: '#333',
-    marginLeft: 5,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 16,
+    marginTop: 8,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    marginBottom: 24,
   },
   statCard: {
-    width: '48%', // Flexible width
-    backgroundColor: '#fff',
+    width: '48%',
+    backgroundColor: 'white',
     borderRadius: 16,
-    padding: 15,
+    padding: 16,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    // Card Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
   iconBox: {
-    padding: 8,
-    borderRadius: 10,
-  },
-  statContent: {
-    flex: 1,
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 12,
   },
   statValue: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#111827',
   },
   statLabel: {
-    fontSize: 11,
-    color: '#888',
-    marginTop: 2,
+    fontSize: 12,
+    color: '#6b7280',
   },
   menuContainer: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
+    backgroundColor: 'white',
     borderRadius: 16,
-    paddingVertical: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
+    padding: 8,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
   },
   menuIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
-  menuText: {
+  destructiveIconBox: {
+    backgroundColor: '#fef2f2',
+  },
+  menuLabel: {
     fontSize: 15,
-    color: '#333',
     fontWeight: '500',
+    color: '#374151',
   },
+  destructiveText: {
+    color: '#ef4444',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginVertical: 8,
+    marginHorizontal: 12,
+  },
+  versionText: {
+    textAlign: 'center',
+    color: '#9ca3af',
+    fontSize: 12,
+    marginTop: 24,
+    marginBottom: 20,
+  }
 });
 
 export default ProfileScreen;
