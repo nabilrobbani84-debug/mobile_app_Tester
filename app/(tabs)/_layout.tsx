@@ -2,8 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from '@/hooks/use-color-scheme'; // Pastikan path ini benar sesuai struktur folder Anda
-// import { Colors } from '@/constants/Colors'; // Jika Anda punya file Colors
+// import { useColorScheme } from '@/hooks/use-color-scheme'; // <-- Baris ini dihapus karena tidak digunakan
 
 const PRIMARY_COLOR = '#0a7ea4';
 const INACTIVE_COLOR = '#8E8E93';
@@ -18,13 +17,13 @@ export default function TabLayout() {
         tabBarShowLabel: true,
         tabBarStyle: {
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 25 : 20, // Sedikit dinaikkan
+          bottom: Platform.OS === 'ios' ? 25 : 20,
           left: 20,
           right: 20,
           elevation: 5,
           backgroundColor: '#ffffff',
           borderRadius: 15,
-          height: 65, // Sedikit dipertinggi agar tidak sempit
+          height: 65,
           paddingBottom: Platform.OS === 'ios' ? 0 : 10,
           paddingTop: 10,
           shadowColor: '#000',
@@ -33,7 +32,6 @@ export default function TabLayout() {
           shadowRadius: 3.84,
           borderTopWidth: 0,
         },
-        // Tambahkan ini agar halaman tidak tertutup tab bar
         sceneStyle: {
            paddingBottom: 80 
         }
