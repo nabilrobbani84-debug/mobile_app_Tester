@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, RefreshControl, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image';
+// Baris import Image dihapus karena tidak digunakan
+// import { Image } from 'expo-image'; 
 
 // Import UI Components
 import ParallaxScrollView from '@/components/parallax-scroll-view';
