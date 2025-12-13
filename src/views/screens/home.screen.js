@@ -1,5 +1,7 @@
 import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { router } from 'expo-router';
+// Hapus 'Dimensions' dari import
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -54,7 +56,7 @@ export default function HomeScreen() {
         {/* Tombol Lapor Cepat */}
         <TouchableOpacity 
             style={styles.reportButton} 
-            onPress={() => router.push('/report-form')} // <--- UBAH onPress
+            onPress={() => router.push('/report-form')}
         >
           <Ionicons name="add-circle-outline" size={28} color="white" />
           <Text style={styles.reportButtonText}>Isi Laporan Konsumsi</Text>
