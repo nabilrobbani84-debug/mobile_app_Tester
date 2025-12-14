@@ -1,5 +1,4 @@
 // src/views/screens/SplashScreen.js
-// Splash Screen Component
 import React, { useEffect, useRef } from 'react';
 import {
   View,
@@ -10,12 +9,15 @@ import {
   Dimensions,
 } from 'react-native';
 import { COLORS, FONTS, SIZES } from '../../config/theme';
+
 const { width, height } = Dimensions.get('window');
+
 const SplashScreen = ({ onAnimationComplete }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const textFadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     // Initial animation sequence
     Animated.sequence([
@@ -40,6 +42,7 @@ const SplashScreen = ({ onAnimationComplete }) => {
         useNativeDriver: true,
       }),
     ]).start();
+
     // Continuous pulse animation
     Animated.loop(
       Animated.sequence([
@@ -56,6 +59,7 @@ const SplashScreen = ({ onAnimationComplete }) => {
       ])
     ).start();
   }, [fadeAnim, scaleAnim, textFadeAnim, pulseAnim]);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
@@ -65,6 +69,7 @@ const SplashScreen = ({ onAnimationComplete }) => {
         <View style={styles.gradient1} />
         <View style={styles.gradient2} />
       </View>
+
       {/* Logo */}
       <Animated.View
         style={[
@@ -89,10 +94,12 @@ const SplashScreen = ({ onAnimationComplete }) => {
           </View>
         </View>
       </Animated.View>
+
       {/* App Name */}
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={styles.appName}>Modiva</Text>
       </Animated.View>
+
       {/* Tagline */}
       <Animated.View 
         style={[
@@ -103,6 +110,7 @@ const SplashScreen = ({ onAnimationComplete }) => {
         <Text style={styles.tagline}>Monitoring Distribusi Vitamin</Text>
         <Text style={styles.message}>Pantau kesehatan, Rutin Minum Vitamin</Text>
       </Animated.View>
+
       {/* Loading Indicator */}
       <Animated.View 
         style={[styles.loadingDots, { opacity: textFadeAnim }]}
@@ -111,6 +119,7 @@ const SplashScreen = ({ onAnimationComplete }) => {
         <LoadingDot delay={200} />
         <LoadingDot delay={400} />
       </Animated.View>
+
       {/* Version */}
       <Animated.Text 
         style={[styles.version, { opacity: textFadeAnim }]}
@@ -120,9 +129,11 @@ const SplashScreen = ({ onAnimationComplete }) => {
     </View>
   );
 };
+
 // Loading Dot Component
 const LoadingDot = ({ delay }) => {
   const opacity = useRef(new Animated.Value(0.3)).current;
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -140,8 +151,10 @@ const LoadingDot = ({ delay }) => {
       ])
     ).start();
   }, [delay, opacity]);
+
   return <Animated.View style={[styles.dot, { opacity }]} />;
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -267,4 +280,5 @@ const styles = StyleSheet.create({
     bottom: 30,
   },
 });
+
 export default SplashScreen;
