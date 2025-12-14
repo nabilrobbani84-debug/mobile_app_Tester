@@ -1,7 +1,7 @@
 import React from 'react';
-// Mengimpor screen yang sudah ada dari folder src
-import HomeScreen from '@/src/views/screens/home.screen';
+// Path import benar: naik 2 level dari 'app/(tabs)/' ke root
+import HomeScreen from '../../src/views/screens/home.screen';
 
-export default function HomePage() {
+export default function TabIndex() {
   return <HomeScreen />;
 }
