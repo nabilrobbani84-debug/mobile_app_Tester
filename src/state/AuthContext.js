@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect } from 'react';
+// Imports from your storage helper utility
 import { 
   saveAuthToken, 
   saveUserData, 
@@ -10,7 +11,7 @@ import {
 // Initial state
 const initialState = {
   isAuthenticated: false,
-  isLoading: true, // Default true agar aplikasi menunggu cek storage
+  isLoading: true, // Default true to wait for storage check
   token: null,
   user: null,
   error: null,
@@ -69,11 +70,11 @@ const authReducer = (state, action) => {
 
 const AuthContext = createContext(null);
 
-// Mock API yang lebih detail
+// Mock API
 const mockLoginAPI = async ({ nisn, schoolId }) => {
-  await new Promise(resolve => setTimeout(resolve, 1500)); // Delay simulasi
+  await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
   
-  // Validasi Hardcode untuk Demo
+  // Hardcoded validation for demo
   if (nisn === '0110222079' && schoolId === 'SMPN1JKT') {
     return {
       success: true,
@@ -101,7 +102,7 @@ const mockLoginAPI = async ({ nisn, schoolId }) => {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Inisialisasi: Cek Login saat aplikasi dibuka
+  // Initialize: Check for login session on app start
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
@@ -131,7 +132,7 @@ export const AuthProvider = ({ children }) => {
       const response = await mockLoginAPI(credentials);
       
       if (response.success) {
-        // Simpan ke storage HP
+        // Save to device storage
         await saveAuthToken(response.data.token);
         await saveUserData(response.data.user);
         
@@ -147,7 +148,8 @@ export const AuthProvider = ({ children }) => {
         });
         return { success: false, error: response.error };
       }
-    } catch (error) {
+    // PERBAIKAN DI SINI: Mengganti 'error' menjadi '_error'
+    } catch (_error) {
       dispatch({ 
         type: AUTH_ACTIONS.LOGIN_FAILURE, 
         payload: 'Terjadi kesalahan jaringan' 
@@ -158,7 +160,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      await clearUserSession(); // Hapus dari storage HP
+      await clearUserSession(); // Clear from device storage
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     } catch (error) {
       console.error('Logout failed:', error);
