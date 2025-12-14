@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-// Path import benar: naik 1 level dari 'app/' ke root
+// Pastikan path import ini benar (naik 1 level dari app/ ke src/)
 import { useAuth } from '../src/state/AuthContext';
 import SplashScreen from '../src/views/screens/splash.screen';
 
@@ -19,14 +19,21 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
+    // Jalankan navigasi HANYA JIKA:
+    // 1. Proses cek login selesai (!isLoading)
+    // 2. Animasi splash sudah minimal 3 detik (splashAnimationFinished)
     if (!isLoading && splashAnimationFinished) {
       if (isAuthenticated) {
+        // Jika sudah login, masuk ke area Tabs/Home
         router.replace('/(tabs)');
       } else {
+        // Jika belum login, masuk ke halaman Login
         router.replace('/login');
       }
     }
   }, [isLoading, splashAnimationFinished, isAuthenticated, router]);
 
-  return <SplashScreen />;
+  // PERBAIKAN DI SINI:
+  // Menambahkan prop 'onAnimationComplete' dengan fungsi kosong agar tidak error
+  return <SplashScreen onAnimationComplete={() => {}} />;
 }
