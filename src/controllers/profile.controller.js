@@ -4,17 +4,14 @@
  * @module controllers/profile
  */
 
-import UserModel from '../models/User.model';
-import analyticsService, { EventTypes } from '../services/analytics/analytics.service';
-import { UserAPI } from '../services/api/user.api'; // Pastikan path ini benar
+import { UserModel } from '../models/User.model'; 
+import { analyticsService, EventTypes } from '../services/analytics/analytics.service';
+import { UserAPI } from '../services/api/user.api'; 
 import { ActionTypes, store } from '../state/store';
-import Logger from '../utils/logger';
+import { Logger } from '../utils/logger';
 
-// Mock services jika file belum ada, atau import real service
-const ImageServices = {
-    validate: async (file) => true, // Implementasi validasi size/type
-    compress: async (uri) => ({ uri: uri }) // Return object uri
-};
+// PERBAIKAN: Menghapus variabel 'ImageServices' yang tidak digunakan untuk mengatasi error ESLint no-unused-vars.
+// Jika nanti Anda membutuhkan validasi/kompresi, import service yang sesungguhnya di sini.
 
 export const ProfileController = {
     /**
@@ -37,7 +34,9 @@ export const ProfileController = {
                 store.dispatch(ActionTypes.USER_SET_PROFILE, user.toJSON());
 
                 // Track Analytics
-                analyticsService.trackScreenView('Profile_Screen', { userId: user.id });
+                if (analyticsService && typeof analyticsService.trackScreenView === 'function') {
+                     analyticsService.trackScreenView('Profile_Screen', { userId: user.id });
+                }
 
                 Logger.success('✅ Profile loaded successfully');
             } else {
@@ -48,7 +47,6 @@ export const ProfileController = {
             Logger.error('❌ Failed to load profile:', error);
             
             // Show UI Feedback (Toast/Alert)
-            // Di sini kita hanya dispatch state error, UI yang akan merender Toast
             store.dispatch(ActionTypes.UI_SHOW_TOAST, {
                 type: 'error',
                 message: 'Gagal memuat profil. Periksa koneksi internet Anda.'
@@ -69,11 +67,11 @@ export const ProfileController = {
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'uploadAvatar', isLoading: true });
 
             // 1. Validasi Gambar (Ukuran/Tipe)
-            // Di React Native, kita cek file info via FileSystem (expo-file-system) jika perlu
+            // Implementasi validasi bisa ditambahkan di sini menggunakan FileSystem atau ImagePicker result
             
             // 2. Kompresi Gambar (jika perlu)
-            // const compressed = await ImageServices.compress(imageUri);
-            const finalUri = imageUri; // Gunakan hasil kompresi di sini
+            // Gunakan library seperti expo-image-manipulator jika ingin mengompres gambar
+            const finalUri = imageUri; 
 
             // 3. Upload ke API (Multipart Form Data)
             const formData = new FormData();
@@ -89,7 +87,10 @@ export const ProfileController = {
             store.dispatch(ActionTypes.USER_UPDATE_PROFILE, { avatar: finalUri });
             
             Logger.success('✅ Avatar uploaded successfully');
-            analyticsService.trackEvent(EventTypes.ACTION_CLICK, { action: 'upload_avatar' });
+            
+            if (analyticsService && typeof analyticsService.trackEvent === 'function') {
+                analyticsService.trackEvent(EventTypes.ACTION_CLICK, { action: 'upload_avatar' });
+            }
 
         } catch (error) {
             Logger.error('❌ Failed to upload avatar:', error);
@@ -97,7 +98,7 @@ export const ProfileController = {
                 type: 'error',
                 message: 'Gagal mengunggah foto profil.'
             });
-            throw error; // Re-throw agar UI bisa menangani error spesifik
+            throw error; 
         } finally {
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'uploadAvatar', isLoading: false });
         }
