@@ -22,7 +22,7 @@ const LoginScreen = () => {
   const [schoolId, setSchoolId] = useState('SMPN1JKT');
   const [rememberMe, setRememberMe] = useState(true);
   
-  // State untuk fokus input agar border berubah warna
+  // State for input focus styling
   const [nisnFocused, setNisnFocused] = useState(false);
   const [schoolIdFocused, setSchoolIdFocused] = useState(false);
 
