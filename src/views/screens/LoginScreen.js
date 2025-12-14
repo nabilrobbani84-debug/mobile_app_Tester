@@ -13,26 +13,27 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+// PERBAIKAN 1: Import useRouter untuk navigasi
+import { useRouter } from 'expo-router'; 
 import { useAuth } from '../../state/AuthContext';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../../config/theme';
 
 const LoginScreen = () => {
+  // PERBAIKAN 2: Inisialisasi router
+  const router = useRouter(); 
   const { login, isLoading, error, clearError } = useAuth();
   const [nisn, setNisn] = useState('0110222079');
   const [schoolId, setSchoolId] = useState('SMPN1JKT');
   const [rememberMe, setRememberMe] = useState(true);
   
-  // State for input focus styling
   const [nisnFocused, setNisnFocused] = useState(false);
   const [schoolIdFocused, setSchoolIdFocused] = useState(false);
 
   const handleLogin = async () => {
-    // Clear previous error
     if (error) {
       clearError();
     }
 
-    // Validate inputs
     if (!nisn.trim()) {
       Alert.alert('Error', 'Mohon masukkan NISN');
       return;
@@ -45,7 +46,11 @@ const LoginScreen = () => {
     // Attempt login
     const result = await login({ nisn: nisn.trim(), schoolId: schoolId.trim() });
     
-    if (!result.success) {
+    // PERBAIKAN 3: Cek sukses dan navigasi ke (tabs)
+    if (result.success) {
+      // Pindah ke halaman utama (Tabs) dan replace history login
+      router.replace('/(tabs)');
+    } else {
       Alert.alert('Login Gagal', String(result.error || 'Terjadi kesalahan'));
     }
   };
@@ -64,11 +69,9 @@ const LoginScreen = () => {
       >
         {/* Header */}
         <View style={styles.header}>
-          {/* Decorative circles */}
           <View style={styles.decorCircle1} />
           <View style={styles.decorCircle2} />
           
-          {/* Logo */}
           <View style={styles.logoContainer}>
             <View style={styles.bloodDrop}>
               <View style={styles.bloodDropTop} />
