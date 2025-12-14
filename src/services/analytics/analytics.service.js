@@ -5,11 +5,11 @@
  */
 
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Pastikan package ini terinstall
-import AppConfig from '../../config/app.config';
-import Logger from '../../utils/logger';
-import * as Application from 'expo-application'; // Opsional: Untuk info app version
-import * as Device from 'expo-device'; // Opsional: Untuk info device
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
+import { AppConfig } from '../../config/app.config';
+import { Logger } from '../../utils/logger';
+import * as Application from 'expo-application'; 
+import * as Device from 'expo-device'; 
 
 /**
  * Event Types
@@ -45,8 +45,8 @@ class AnalyticsEvent {
         this.category = this.getCategoryFromType(type);
         this.data = data;
         this.timestamp = Date.now();
-        this.sessionId = null; // Diisi nanti
-        this.userId = null;    // Diisi nanti
+        this.sessionId = null; 
+        this.userId = null;    
         this.platform = Platform.OS;
         this.deviceModel = Device.modelName || 'Unknown';
         this.appVersion = Application.nativeApplicationVersion || '1.0.0';
@@ -125,7 +125,7 @@ export class AnalyticsService {
                 await AsyncStorage.setItem('modiva_session_id', sid);
             }
             return sid;
-        } catch (e) {
+        } catch (_e) { 
             return `sess_temp_${Date.now()}`;
         }
     }
@@ -185,7 +185,7 @@ export class AnalyticsService {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed)) this.queue = parsed;
             }
-        } catch (e) {
+        } catch (_e) { 
             // Ignore corrupted queue
         }
     }
@@ -211,7 +211,7 @@ export class AnalyticsService {
             // Jika sukses, kosongkan queue
             this.queue = [];
             await AsyncStorage.removeItem('modiva_analytics_queue');
-        } catch (error) {
+        } catch (_error) { // PERBAIKAN: Menggunakan _error agar lolos rule no-unused-vars
             Logger.warn('Failed to flush analytics queue, retrying later.');
         }
     }
