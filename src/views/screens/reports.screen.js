@@ -1,33 +1,54 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, View, RefreshControl, ActivityIndicator } from 'react-native';
-// Baris import Image dihapus karena tidak digunakan
-// import { Image } from 'expo-image'; 
+import { 
+  StyleSheet, 
+  View, 
+  RefreshControl, 
+  ActivityIndicator, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  Dimensions,
+  StatusBar 
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
-// Import UI Components
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+// --- PERBAIKAN IMPORT DI SINI ---
+// Hapus 'src/' karena kita sudah berada di dalam folder src (via ../..)
+import { ReportController } from '../../controllers/report.controller';
+import { store } from '../../state/store';
 
-// Import Logic & State
-import { ReportController } from '@/src/controllers/report.controller';
-import { store } from '@/src/state/store';
-import { Fonts } from '@/constants/theme';
+// --- Theme Colors ---
+const COLORS = {
+  background: '#F8F9FA', // Abu-abu sangat muda (bersih)
+  primary: '#3B82F6',    // Biru utama
+  cardBg: '#FFFFFF',
+  textMain: '#111827',   // Hitam soft
+  textSub: '#6B7280',    // Abu-abu text
+  success: '#10B981',    // Hijau
+  warning: '#F59E0B',    // Oranye
+  danger: '#EF4444',     // Merah
+  border: '#E5E7EB',
+};
 
 const ReportsScreen = () => {
+  const router = useRouter();
+  
+  // --- State ---
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
   const [userInfo, setUserInfo] = useState({ name: '', nisn: '-' });
   const [currentHB, setCurrentHB] = useState('-');
   const [reports, setReports] = useState([]);
 
+  // --- Logic Load Data ---
   const loadData = async () => {
     try {
       await ReportController.loadReports();
       const state = store.getState();
       
-      setUserInfo(state.user.profile || { name: 'Pengguna', nisn: '-' });
+      setUserInfo(state.user.profile || { name: 'Siswa', nisn: '-' });
       setCurrentHB(state.user.hemoglobin?.current || '-');
       setReports(state.reports.list || []);
     } catch (error) {
@@ -47,176 +68,397 @@ const ReportsScreen = () => {
     loadData();
   }, []);
 
+  // --- Helper: Status Badge Color ---
+  const getStatusColor = (hbValue) => {
+    const val = parseFloat(hbValue);
+    if (isNaN(val)) return COLORS.textSub;
+    if (val >= 12) return COLORS.success; // Normal
+    if (val >= 10) return COLORS.warning; // Sedikit rendah
+    return COLORS.danger; // Rendah
+  };
+
+  const getStatusText = (hbValue) => {
+    const val = parseFloat(hbValue);
+    if (isNaN(val)) return 'Tidak Ada Data';
+    if (val >= 12) return 'Normal';
+    if (val >= 10) return 'Sedikit Rendah';
+    return 'Anemia';
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#1D3D47"
-          name="chart.bar.fill"
-          style={styles.headerImage}
-        />
-      }
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title" style={{ fontFamily: Fonts.rounded }}>
-          Laporan Kesehatan
-        </ThemedText>
-      </ThemedView>
-
-      <ThemedView style={styles.infoCard}>
-        <ThemedText type="subtitle" style={styles.userName}>
-          {userInfo.name || 'Pengguna'}
-        </ThemedText>
-        <ThemedText style={styles.userDetail}>NISN: {userInfo.nisn}</ThemedText>
-        
-        <View style={styles.hbContainer}>
-          <ThemedText style={styles.hbLabel}>HB Saat Ini</ThemedText>
-          <ThemedText type="title" style={styles.hbValue}>
-            {currentHB} <ThemedText style={styles.unit}>g/dL</ThemedText>
-          </ThemedText>
+      {/* --- Header --- */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Laporan Kesehatan</Text>
+          <Text style={styles.headerSubtitle}>Pantau perkembangan HB-mu</Text>
         </View>
-      </ThemedView>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => router.push('/(tabs)/profil')}
+        >
+          <Ionicons name="person-circle-outline" size={32} color={COLORS.primary} />
+        </TouchableOpacity>
+      </View>
 
-      <ThemedView style={styles.chartContainer}>
-        <ThemedText type="defaultSemiBold" style={{ marginBottom: 10 }}>Tren Hemoglobin (6 Bulan)</ThemedText>
-        <View style={styles.chartPlaceholder}>
-          <ThemedText style={{ color: '#888' }}>Grafik HB akan tampil di sini</ThemedText>
-        </View>
-      </ThemedView>
-
-      <ThemedView style={styles.sectionContainer}>
-        <ThemedText type="subtitle" style={{ marginBottom: 12 }}>Riwayat Laporan</ThemedText>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
+      >
         
+        {/* --- 1. Hero Card (Ringkasan HB) --- */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View>
+              <Text style={styles.heroLabel}>Hemoglobin Saat Ini</Text>
+              <Text style={styles.heroDate}>Update Terakhir: Hari ini</Text>
+            </View>
+            <View style={styles.iconContainer}>
+              <FontAwesome5 name="heartbeat" size={24} color="#FFF" />
+            </View>
+          </View>
+
+          <View style={styles.heroValueContainer}>
+            <Text style={styles.heroValue}>{currentHB}</Text>
+            <Text style={styles.heroUnit}>g/dL</Text>
+          </View>
+
+          <View style={styles.heroFooter}>
+             <View style={styles.statusPill}>
+               <Text style={styles.statusPillText}>
+                 {getStatusText(currentHB)}
+               </Text>
+             </View>
+             <Text style={styles.heroUser}>{userInfo.name}</Text>
+          </View>
+        </View>
+
+        {/* --- 2. Chart Section --- */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Tren Hemoglobin</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllText}>6 Bulan Terakhir</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.chartContainer}>
+          {/* Placeholder Grafik */}
+          <View style={styles.chartPlaceholder}>
+             <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={40} color="#CBD5E1" />
+             <Text style={styles.chartPlaceholderText}>Grafik perkembangan akan muncul disini</Text>
+          </View>
+        </View>
+
+        {/* --- 3. Riwayat Laporan --- */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Riwayat Pemeriksaan</Text>
+        </View>
+
         {loading ? (
-          <ActivityIndicator size="large" color="#0a7ea4" />
+          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
         ) : reports.length === 0 ? (
           <View style={styles.emptyState}>
-            <ThemedText>Belum ada laporan</ThemedText>
+            <Ionicons name="document-text-outline" size={48} color="#D1D5DB" />
+            <Text style={styles.emptyText}>Belum ada riwayat laporan</Text>
           </View>
         ) : (
-          reports.map((report, index) => (
-            <View key={index} style={styles.reportCard}>
-              <View style={styles.reportHeader}>
-                <View>
-                  <ThemedText type="defaultSemiBold">{report.date}</ThemedText>
-                  <ThemedText style={{ color: '#666' }}>HB: {report.hb_value || '-'} g/dL</ThemedText>
+          <View style={styles.listContainer}>
+            {reports.map((report, index) => (
+              <View key={index} style={styles.reportItem}>
+                {/* Tanggal Box */}
+                <View style={styles.dateBox}>
+                  <Text style={styles.dateDay}>{report.date?.split(' ')[0] || '01'}</Text>
+                  <Text style={styles.dateMonth}>{report.date?.split(' ')[1] || 'Jan'}</Text>
                 </View>
-                <View style={[styles.badge, { backgroundColor: '#E6FFFA' }]}>
-                  <ThemedText style={[styles.badgeText, { color: '#047857' }]}>
-                    {report.status || 'Selesai'}
-                  </ThemedText>
+                
+                {/* Detail */}
+                <View style={styles.reportDetail}>
+                  <Text style={styles.reportTitle}>Pemeriksaan Rutin</Text>
+                  <Text style={styles.reportNotes} numberOfLines={1}>
+                    {report.notes || 'Tidak ada catatan tambahan'}
+                  </Text>
+                </View>
+
+                {/* Nilai HB */}
+                <View style={styles.reportValueBox}>
+                  <Text style={[styles.reportValue, { color: getStatusColor(report.hb_value) }]}>
+                    {report.hb_value}
+                  </Text>
+                  <Text style={styles.reportUnit}>g/dL</Text>
                 </View>
               </View>
-              {report.notes ? (
-                <ThemedText style={styles.notes}>{report.notes}</ThemedText>
-              ) : null}
-            </View>
-          ))
+            ))}
+          </View>
         )}
-      </ThemedView>
-    </ParallaxScrollView>
+        
+        {/* Spacer untuk Bottom Tab & FAB */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* --- Floating Action Button (FAB) --- */}
+      <TouchableOpacity 
+        style={styles.fab}
+        activeOpacity={0.8}
+        onPress={() => router.push('/report-form')}
+      >
+        <Ionicons name="add" size={28} color="#FFF" />
+      </TouchableOpacity>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
-  titleContainer: {
+  scrollContent: {
+    padding: 20,
+  },
+  
+  // Header
+  header: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: COLORS.background,
   },
-  infoCard: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(150, 150, 150, 0.1)',
-    marginBottom: 20,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: COLORS.textMain,
   },
-  userName: {
-    marginBottom: 4,
+  headerSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSub,
+    marginTop: 2,
   },
-  userDetail: {
-    opacity: 0.7,
-    marginBottom: 12,
+  profileButton: {
+    padding: 4,
   },
-  hbContainer: {
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.2)',
-    paddingTop: 12,
+
+  // Hero Card
+  heroCard: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 10,
+    marginBottom: 24,
+    // Shadow
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  hbLabel: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    opacity: 0.6,
-  },
-  hbValue: {
-    color: '#0a7ea4',
-  },
-  unit: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: 'normal',
-  },
-  sectionContainer: {
-    marginBottom: 20,
-  },
-  reportCard: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(150, 150, 150, 0.05)',
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(150, 150, 150, 0.1)',
-  },
-  reportHeader: {
+  heroHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
   },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  heroLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  heroDate: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+  },
+  iconContainer: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 10,
     borderRadius: 12,
   },
-  badgeText: {
+  heroValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 16,
+  },
+  heroValue: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  heroUnit: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.8)',
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  heroFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  statusPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusPillText: {
+    color: '#FFF',
     fontSize: 12,
     fontWeight: 'bold',
   },
-  notes: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 4,
+  heroUser: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  emptyState: {
-    padding: 24,
+
+  // Sections
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.6,
+    marginBottom: 12,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textMain,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+
+  // Chart
   chartContainer: {
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    // Soft shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
   chartPlaceholder: {
-    height: 180,
-    backgroundColor: 'rgba(150, 150, 150, 0.1)',
-    borderRadius: 12,
+    height: 150,
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+  },
+  chartPlaceholderText: {
+    marginTop: 8,
+    color: COLORS.textSub,
+    fontSize: 12,
+  },
+
+  // List
+  listContainer: {
+    gap: 12,
+  },
+  reportItem: {
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
-  }
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  dateBox: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  dateDay: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.textMain,
+  },
+  dateMonth: {
+    fontSize: 10,
+    color: COLORS.textSub,
+    textTransform: 'uppercase',
+  },
+  reportDetail: {
+    flex: 1,
+  },
+  reportTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textMain,
+  },
+  reportNotes: {
+    fontSize: 13,
+    color: COLORS.textSub,
+    marginTop: 2,
+  },
+  reportValueBox: {
+    alignItems: 'flex-end',
+  },
+  reportValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  reportUnit: {
+    fontSize: 12,
+    color: COLORS.textSub,
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: COLORS.textSub,
+    marginTop: 10,
+  },
+
+  // Floating Action Button
+  fab: {
+    position: 'absolute',
+    bottom: 30, // Disesuaikan agar tidak tertutup TabBar
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 });
 
 export default ReportsScreen;
