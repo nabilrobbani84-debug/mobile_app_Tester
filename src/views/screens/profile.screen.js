@@ -106,40 +106,7 @@ const ProfileScreen = () => {
           </View>
 
           {/* Menu Pengaturan Akun (Tanpa Report Form) */}
-          <Text style={styles.sectionTitle}>Pengaturan Akun</Text>
-          <View style={styles.menuContainer}>
-            <MenuItem 
-              icon="person-outline" 
-              label="Edit Profil" 
-              onPress={() => Alert.alert('Info', 'Fitur Edit Profil')} 
-            />
-            <MenuItem 
-              icon="lock-closed-outline" 
-              label="Ubah Kata Sandi" 
-              onPress={() => Alert.alert('Info', 'Fitur Ubah Password')} 
-            />
-            <MenuItem 
-              icon="notifications-outline" 
-              label="Notifikasi" 
-              onPress={() => router.push('/(tabs)/notifikasi')} 
-            />
-            <MenuItem 
-              icon="help-circle-outline" 
-              label="Bantuan" 
-              onPress={() => Alert.alert('Info', 'Hubungi Admin')} 
-            />
-            
-            <View style={styles.divider} />
-            
-            <MenuItem 
-              icon="log-out-outline" 
-              label="Keluar" 
-              isDestructive 
-              onPress={handleLogout} 
-            />
-          </View>
-          
-          <Text style={styles.versionText}>Versi Aplikasi 1.0.0</Text>
+
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
