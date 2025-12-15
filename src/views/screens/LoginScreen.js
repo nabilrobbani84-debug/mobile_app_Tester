@@ -4,398 +4,375 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-  ScrollView,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  Keyboard,
+  ScrollView,
   Alert,
+  ActivityIndicator,
+  StyleSheet,
+  Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-// PERBAIKAN 1: Import useRouter untuk navigasi
-import { useRouter } from 'expo-router'; 
-import { useAuth } from '../../state/AuthContext';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../../config/theme';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// --- IMPORT AUTH CONTEXT ---
+import { useAuth } from '../../state/AuthContext'; 
+
+// --- ASET GAMBAR ---
+const LogoImage = require('../../../assets/images/Logo.png'); 
+const BackgroundImage = require('../../../assets/images/botol.png'); 
+
+const IconNISN = { uri: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png' }; 
+const IconIDSekolah = { uri: 'https://cdn-icons-png.flaticon.com/512/1665/1665731.png' };
 
 const LoginScreen = () => {
-  // PERBAIKAN 2: Inisialisasi router
-  const router = useRouter(); 
-  const { login, isLoading, error, clearError } = useAuth();
-  const [nisn, setNisn] = useState('0110222079');
-  const [schoolId, setSchoolId] = useState('SMPN1JKT');
-  const [rememberMe, setRememberMe] = useState(true);
+  const router = useRouter();
+  const { login } = useAuth(); 
+
+  // State Data
+  const [nisn, setNisn] = useState('');
+  const [idSekolah, setIdSekolah] = useState('');
   
-  const [nisnFocused, setNisnFocused] = useState(false);
-  const [schoolIdFocused, setSchoolIdFocused] = useState(false);
+  // State UI
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // State Fokus
+  const [isNisnFocused, setIsNisnFocused] = useState(false);
+  const [isIdFocused, setIsIdFocused] = useState(false);
 
   const handleLogin = async () => {
-    if (error) {
-      clearError();
-    }
-
-    if (!nisn.trim()) {
-      Alert.alert('Error', 'Mohon masukkan NISN');
-      return;
-    }
-    if (!schoolId.trim()) {
-      Alert.alert('Error', 'Mohon masukkan ID Sekolah');
+    Keyboard.dismiss();
+    if (!nisn || !idSekolah) {
+      Alert.alert('Gagal Masuk', 'Harap isi NISN dan ID Sekolah terlebih dahulu.');
       return;
     }
 
-    // Attempt login
-    const result = await login({ nisn: nisn.trim(), schoolId: schoolId.trim() });
-    
-    // PERBAIKAN 3: Cek sukses dan navigasi ke (tabs)
-    if (result.success) {
-      // Pindah ke halaman utama (Tabs) dan replace history login
-      router.replace('/(tabs)');
-    } else {
-      Alert.alert('Login Gagal', String(result.error || 'Terjadi kesalahan'));
+    setIsLoading(true);
+
+    try {
+      const response = await login({ nisn, schoolId: idSekolah });
+      if (response.success) {
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Login Gagal', response.error || 'NISN atau ID Sekolah salah.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Terjadi kesalahan sistem. Silakan coba lagi.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+    <View style={styles.mainContainer}>
       
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.decorCircle1} />
-          <View style={styles.decorCircle2} />
-          
-          <View style={styles.logoContainer}>
-            <View style={styles.bloodDrop}>
-              <View style={styles.bloodDropTop} />
-              <View style={styles.bloodDropBottom}>
-                <View style={styles.vitaminCapsule}>
-                  <View style={styles.capsuleLeft} />
-                  <View style={styles.capsuleRight} />
+      {/* --- BACKGROUND DECORATION --- */}
+      {/* Background ditaruh paling atas agar dirender duluan (di bawah elemen lain) */}
+      <View style={styles.backgroundWrapper}>
+        <Image 
+          source={BackgroundImage} 
+          style={styles.backgroundImage}
+        />
+      </View>
+
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          {/* PERBAIKAN: Hapus TouchableWithoutFeedback di sini. 
+             Gunakan properti ScrollView untuk menangani keyboard. */}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            // PENTING: Agar input bisa diklik di dalam ScrollView
+            keyboardShouldPersistTaps="handled"
+            // Opsional: Keyboard turun saat user scroll (UX lebih baik)
+            keyboardDismissMode="on-drag"
+          >
+            
+            {/* --- HEADER LOGO --- */}
+            <View style={styles.headerContainer}>
+              <View style={styles.logoContainer}>
+                  <Image
+                    source={LogoImage}
+                    style={styles.logoImage}
+                  />
+              </View>
+              <Text style={styles.appNameText}>
+                MODIVA
+              </Text>
+            </View>
+
+            {/* --- CARD UTAMA (FORM LOGIN) --- */}
+            <View style={styles.cardContainer}>
+              
+              <View style={styles.welcomeTextContainer}>
+                <Text style={styles.welcomeTitle}>Selamat Datang</Text>
+                <Text style={styles.welcomeSubtitle}>Masuk untuk memantau kesehatanmu</Text>
+                <Text style={{fontSize: 10, color: '#ccc', marginTop: 5, textAlign: 'center'}}>
+                  (Test: 0110222079 / SMPN1JKT)
+                </Text>
+              </View>
+
+              <View style={styles.formContainer}>
+                
+                {/* INPUT 1: NISN */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>NISN</Text>
+                  <View 
+                    style={[
+                      styles.inputContainer,
+                      isNisnFocused && styles.inputFocused
+                    ]}
+                  >
+                    <View style={styles.iconWrapper}>
+                      <Image source={IconNISN} style={styles.iconImage} />
+                    </View>
+                    <View style={styles.separator} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Nomor Induk Siswa"
+                      placeholderTextColor="#9CA3AF"
+                      value={nisn}
+                      onChangeText={setNisn}
+                      keyboardType="number-pad"
+                      onFocus={() => setIsNisnFocused(true)}
+                      onBlur={() => setIsNisnFocused(false)}
+                      // cursorColor hanya support Android baru, gunakan selectionColor untuk universal
+                      selectionColor="#2563EB" 
+                      autoCorrect={false}
+                    />
+                  </View>
                 </View>
+
+                {/* INPUT 2: ID Sekolah */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>ID Sekolah</Text>
+                  <View 
+                    style={[
+                      styles.inputContainer,
+                      isIdFocused && styles.inputFocused
+                    ]}
+                  >
+                    <View style={styles.iconWrapper}>
+                      <Image source={IconIDSekolah} style={styles.iconImage} />
+                    </View>
+                    <View style={styles.separator} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Kode Sekolah"
+                      placeholderTextColor="#9CA3AF"
+                      value={idSekolah}
+                      onChangeText={setIdSekolah}
+                      autoCapitalize="characters"
+                      onFocus={() => setIsIdFocused(true)}
+                      onBlur={() => setIsIdFocused(false)}
+                      selectionColor="#2563EB"
+                      autoCorrect={false}
+                    />
+                  </View>
+                </View>
+
+                {/* TOMBOL LOGIN */}
+                <TouchableOpacity
+                  onPress={handleLogin}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                  style={[styles.loginButton, isLoading && { opacity: 0.7 }]}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.loginButtonText}>MASUK</Text>
+                  )}
+                </TouchableOpacity>
+
               </View>
             </View>
-          </View>
-          
-          <Text style={styles.appName}>Modiva</Text>
-          <Text style={styles.tagline}>Monitoring Distribusi Vitamin</Text>
-        </View>
 
-        {/* Form Card */}
-        <View style={styles.formCard}>
-          <Text style={styles.title}>Masuk ke Akun</Text>
-          <Text style={styles.subtitle}>
-            Masukkan NISN dan ID Sekolah untuk melanjutkan
-          </Text>
-
-          {/* NISN Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              NISN <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={[
-              styles.inputContainer,
-              nisnFocused && styles.inputFocused,
-            ]}>
-              <Ionicons 
-                name="card-outline" 
-                size={20} 
-                color={nisnFocused ? COLORS.primary : COLORS.gray} 
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Masukkan NISN"
-                placeholderTextColor={COLORS.gray}
-                value={nisn}
-                onChangeText={setNisn}
-                keyboardType="number-pad"
-                maxLength={10}
-                onFocus={() => setNisnFocused(true)}
-                onBlur={() => setNisnFocused(false)}
-              />
+            <View style={styles.footerContainer}>
+              <Text style={styles.footerText}>Versi Aplikasi 1.0.0</Text>
             </View>
-            <Text style={styles.helpText}>NISN terdiri dari 10 digit angka</Text>
-          </View>
 
-          {/* School ID Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              ID Sekolah <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={[
-              styles.inputContainer,
-              schoolIdFocused && styles.inputFocused,
-            ]}>
-              <Ionicons 
-                name="school-outline" 
-                size={20} 
-                color={schoolIdFocused ? COLORS.primary : COLORS.gray} 
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Masukkan ID Sekolah"
-                placeholderTextColor={COLORS.gray}
-                value={schoolId}
-                onChangeText={setSchoolId}
-                autoCapitalize="characters"
-                onFocus={() => setSchoolIdFocused(true)}
-                onBlur={() => setSchoolIdFocused(false)}
-              />
-            </View>
-          </View>
-
-          {/* Remember Me */}
-          <TouchableOpacity
-            style={styles.rememberContainer}
-            onPress={() => setRememberMe(!rememberMe)}
-            activeOpacity={0.7}
-          >
-            <View style={[
-              styles.checkbox,
-              rememberMe && styles.checkboxChecked,
-            ]}>
-              {rememberMe && (
-                <Ionicons name="checkmark" size={14} color={COLORS.white} />
-              )}
-            </View>
-            <Text style={styles.rememberText}>Ingat saya</Text>
-          </TouchableOpacity>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoading}
-            activeOpacity={0.8}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={COLORS.white} />
-            ) : (
-              <Text style={styles.loginButtonText}>Masuk</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Help Link */}
-          <View style={styles.helpContainer}>
-            <Text style={styles.helpLinkText}>Butuh bantuan? </Text>
-            <TouchableOpacity>
-              <Text style={styles.helpLink}>Hubungi Admin</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 };
 
+// --- STYLESHEET ---
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#F3F4F6', 
+  },
+  backgroundWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // Hapus zIndex: -1 karena kadang bug di Android. 
+    // Urutan render (ditaruh paling atas di JSX) sudah cukup membuatnya di belakang.
+  },
+  backgroundImage: {
+    width: 700,
+    height: 800,
+    position: 'absolute',
+    top: '10%',
+    left: -70, 
+    opacity: 0.6,
+    transform: [{ rotate: '-10deg' }],
+    resizeMode: 'contain'
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 30,
   },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 40,
+  headerContainer: {
     alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  decorCircle1: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  decorCircle2: {
-    position: 'absolute',
-    bottom: 20,
-    left: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 24,
+    marginBottom: 32,
   },
   logoContainer: {
-    marginBottom: SIZES.medium,
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 20,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  bloodDrop: {
-    alignItems: 'center',
+  logoImage: {
+    width: 70,
+    height: 70,
+    resizeMode: 'contain',
   },
-  bloodDropTop: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 25,
-    borderRightWidth: 25,
-    borderBottomWidth: 40,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: COLORS.secondary,
-  },
-  bloodDropBottom: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.secondary,
-    marginTop: -10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  vitaminCapsule: {
-    flexDirection: 'row',
-    width: 28,
-    height: 14,
-    borderRadius: 7,
-    overflow: 'hidden',
-  },
-  capsuleLeft: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-  },
-  capsuleRight: {
-    flex: 1,
-    backgroundColor: '#FFD700',
-  },
-  appName: {
-    ...FONTS.bold,
+  appNameText: {
     fontSize: 28,
-    color: COLORS.white,
-    letterSpacing: 2,
+    fontWeight: '900',
+    color: '#111827',
+    marginTop: 12,
+    letterSpacing: 1,
   },
-  tagline: {
-    ...FONTS.regular,
-    fontSize: SIZES.small,
-    color: 'rgba(255, 255, 255, 0.8)',
+  cardContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 10, 
+  },
+  welcomeTextContainer: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#6B7280', 
+    textAlign: 'center',
     marginTop: 4,
   },
-  formCard: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: SIZES.screenPadding,
-    paddingTop: 30,
-    paddingBottom: 40,
-  },
-  title: {
-    ...FONTS.bold,
-    fontSize: SIZES.extraLarge,
-    color: COLORS.dark,
-    marginBottom: SIZES.small,
-  },
-  subtitle: {
-    ...FONTS.regular,
-    fontSize: SIZES.font,
-    color: COLORS.gray,
-    marginBottom: SIZES.extraLarge,
+  formContainer: {
+    gap: 20,
   },
   inputGroup: {
-    marginBottom: SIZES.medium,
+    marginBottom: 4,
   },
   label: {
-    ...FONTS.medium,
-    fontSize: SIZES.font,
-    color: COLORS.dark,
-    marginBottom: SIZES.small,
-  },
-  required: {
-    color: COLORS.secondary,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 8,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderRadius: SIZES.radius,
-    paddingHorizontal: SIZES.medium,
-    height: SIZES.inputHeight,
+    backgroundColor: '#F9FAFB', 
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    height: 56,
+    paddingHorizontal: 16,
   },
   inputFocused: {
-    borderColor: COLORS.primary,
-    ...SHADOWS.small,
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
   },
-  input: {
-    flex: 1,
-    ...FONTS.regular,
-    fontSize: SIZES.font,
-    color: COLORS.dark,
-    marginLeft: SIZES.small,
-  },
-  helpText: {
-    ...FONTS.regular,
-    fontSize: SIZES.small,
-    color: COLORS.gray,
-    marginTop: 4,
-  },
-  rememberContainer: {
-    flexDirection: 'row',
+  iconWrapper: {
+    width: 30,
     alignItems: 'center',
-    marginBottom: SIZES.large,
-    marginTop: SIZES.small,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: COLORS.gray,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SIZES.small,
   },
-  checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  rememberText: {
-    ...FONTS.regular,
-    fontSize: SIZES.font,
-    color: COLORS.gray,
-  },
-  loginButton: {
-    backgroundColor: COLORS.primary,
-    height: SIZES.buttonHeight,
-    borderRadius: SIZES.radius,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...SHADOWS.medium,
-  },
-  loginButtonDisabled: {
+  iconImage: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
     opacity: 0.7,
   },
-  loginButtonText: {
-    ...FONTS.bold,
-    fontSize: SIZES.medium,
-    color: COLORS.white,
+  separator: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#D1D5DB',
+    marginHorizontal: 12,
   },
-  helpContainer: {
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
+    height: '100%',
+    // Penting untuk Android agar teks vertikal di tengah
+    paddingVertical: 0, 
+  },
+  loginButton: {
+    backgroundColor: '#2563EB',
+    height: 58,
+    borderRadius: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SIZES.extraLarge,
+    marginTop: 12,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  helpLinkText: {
-    ...FONTS.regular,
-    fontSize: SIZES.font,
-    color: COLORS.gray,
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
-  helpLink: {
-    ...FONTS.semiBold,
-    fontSize: SIZES.font,
-    color: COLORS.primary,
+  footerContainer: {
+    marginTop: 32,
+    alignItems: 'center',
   },
+  footerText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+  }
 });
 
 export default LoginScreen;
