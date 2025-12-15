@@ -1,348 +1,322 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  RefreshControl, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Dimensions 
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React from 'react';
+import { router } from 'expo-router';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient'; 
 import { Ionicons } from '@expo/vector-icons';
 
-// Components
-import Header from '../components/navigation/header.component';
-import VitaminCard from '../components/cards/vitamin-card.component';
-import HealthTipCard from '../components/cards/health-tip-card.component';
-import ConsumptionChart from '../components/charts/consumption-chart.component';
-import ProgressRing from '../components/charts/progress-ring.component'; // Import komponen ProgressRing
+// PERBAIKAN: Import dari lokasi yang benar (src/config/theme.js)
+import { COLORS, SIZES, FONTS } from '../../config/theme';
 
-// State & Services
-import { useAuth } from '../../state/AuthContext';
-import { reportService } from '../../services/api/report.api';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+// Data Mockup (Diambil dari assets/js/api.js)
+const userData = {
+  name: 'Aisyah',
+  consumption_count: 8,
+  total_target: 48,
+  hb_last: 12.5
+};
 
-const { width } = Dimensions.get('window');
-
-const HomeScreen = () => {
-  const router = useRouter();
-  const { user } = useAuth();
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  
-  // State data dummy/real
-  const [summaryData, setSummaryData] = useState({
-    totalConsumed: 0,
-    missed: 0,
-    streak: 0,
-    consumptionRate: 0,
-  });
-
-  const [weeklyData, setWeeklyData] = useState([]);
-
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    fetchDashboardData().finally(() => setRefreshing(false));
-  }, []);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      // Simulasi fetch data - ganti dengan API call yang sesuai
-      // const stats = await reportService.getStats(user.id);
-      
-      // Data Dummy untuk visualisasi Dashboard Siswa
-      setSummaryData({
-        totalConsumed: 24,
-        missed: 2,
-        streak: 5,
-        consumptionRate: 0.85, // 85%
-      });
-
-      setWeeklyData([
-        { value: 1, label: 'Sen' },
-        { value: 1, label: 'Sel' },
-        { value: 1, label: 'Rab' },
-        { value: 0, label: 'Kam' },
-        { value: 1, label: 'Jum' },
-        { value: 1, label: 'Sab' },
-        { value: 1, label: 'Min' },
-      ]);
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      setLoading(false);
-    }
-  };
-
-  const handleReportPress = () => {
-    router.push('/(tabs)/laporan');
-  };
+export default function HomeScreen() {
+  const percentage = Math.round((userData.consumption_count / userData.total_target) * 100);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <Header 
-        title={`Halo, ${user?.name || 'Siswa'}`} 
-        subtitle="Sudah minum vitamin hari ini?"
-        showProfile={true}
-      />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-        }
+    // Gunakan COLORS.background dari theme jika diinginkan, atau tetap hardcode
+    <View style={styles.container}>
+      {/* Header dengan Gradient */}
+      <LinearGradient
+        // Anda bisa mengganti hex code ini dengan variabel dari COLORS jika mau
+        // Contoh: colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+        colors={['#3b82f6', '#1d4ed8']} 
+        style={styles.header}
       >
-        {/* --- HERO SECTION: PROGRESS RING --- */}
-        <View style={styles.heroSection}>
-          <View style={styles.progressCard}>
-            <View style={styles.progressContent}>
-              <View>
-                <Text style={styles.progressTitle}>Kepatuhan Minum</Text>
-                <Text style={styles.progressSubtitle}>Minggu Ini</Text>
-                <TouchableOpacity style={styles.ctaButton} onPress={handleReportPress}>
-                  <Text style={styles.ctaText}>Lapor Sekarang</Text>
-                  <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.ringContainer}>
-                <ProgressRing 
-                  progress={summaryData.consumptionRate} 
-                  size={100} 
-                  strokeWidth={10} 
-                  color={COLORS.primary}
-                />
-              </View>
-            </View>
+        <SafeAreaView>
+          <View style={styles.headerContent}>
+            <Text style={styles.greeting}>Hai, {userData.name} 👋</Text>
+            <Text style={styles.subGreeting}>Jangan lupa minum vitamin hari ini!</Text>
           </View>
-        </View>
+        </SafeAreaView>
+      </LinearGradient>
 
-        {/* --- SUMMARY CARDS (GRID) --- */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ringkasan Aktivitas</Text>
-          <View style={styles.statsGrid}>
-            <VitaminCard
-              title="Total Minum"
-              value={`${summaryData.totalConsumed}`}
-              icon="checkmark-circle"
-              color={COLORS.success}
-              trend="+2 dari minggu lalu"
-              style={styles.statsCard}
-            />
-            <VitaminCard
-              title="Terlewat"
-              value={`${summaryData.missed}`}
-              icon="alert-circle"
-              color={COLORS.error}
-              trend="Perbaiki kepatuhan!"
-              style={styles.statsCard}
-            />
-            {/* Kartu Streak Tambahan */}
-            <View style={[styles.customCard, styles.statsCard]}>
-              <View style={[styles.iconContainer, { backgroundColor: COLORS.warning + '20' }]}>
-                <Ionicons name="flame" size={24} color={COLORS.warning} />
-              </View>
-              <Text style={styles.cardValue}>{summaryData.streak} Hari</Text>
-              <Text style={styles.cardTitle}>Streak Menurun</Text>
-              <Text style={styles.cardTrend}>Pertahankan!</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* --- CHART SECTION --- */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Grafik Mingguan</Text>
-          <View style={styles.chartContainer}>
-            <ConsumptionChart data={weeklyData} />
-          </View>
-        </View>
-
-        {/* --- TIPS SECTION --- */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Tips Kesehatan</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/profil')}>
-              <Text style={styles.seeAllText}>Lihat Semua</Text>
-            </TouchableOpacity>
+      <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 100 }}>
+        
+        {/* Card Informasi Vitamin */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Informasi Vitamin</Text>
+            {/* Menggunakan COLORS.info atau primary */}
+            <Ionicons name="medkit" size={24} color={COLORS.info || "#3b82f6"} />
           </View>
           
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tipsScroll}>
-            <HealthTipCard
-              title="Pentingnya Zat Besi"
-              description="Zat besi membantu pembentukan sel darah merah untuk mencegah anemia."
-              category="Nutrisi"
-            />
-            <HealthTipCard
-              title="Minum Air Putih"
-              description="Pastikan minum 8 gelas air sehari agar metabolisme lancar."
-              category="Hidrasi"
-            />
-             <HealthTipCard
-              title="Olahraga Ringan"
-              description="Lakukan peregangan 5 menit setiap pagi."
-              category="Aktivitas"
-            />
-          </ScrollView>
+          <View style={styles.statRow}>
+            <Text style={styles.bigStat}>{userData.consumption_count}</Text>
+            <Text style={styles.statDivider}>/</Text>
+            <Text style={styles.totalStat}>{userData.total_target}</Text>
+          </View>
+          <Text style={styles.statLabel}>Jumlah vitamin diminum</Text>
+          
+          {/* Progress Bar */}
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
+          </View>
         </View>
 
-        <View style={{ height: 100 }} /> 
+        {/* Tombol Lapor Cepat */}
+        <TouchableOpacity 
+            style={styles.reportButton} 
+            onPress={() => router.push('/report-form')}
+        >
+          <Ionicons name="add-circle-outline" size={28} color="white" />
+          <Text style={styles.reportButtonText}>Isi Laporan Konsumsi</Text>
+        </TouchableOpacity>
+
+        {/* Card Tren Hemoglobin */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Tren Hemoglobin</Text>
+            <Text style={styles.weekLabel}>Minggu ini</Text>
+          </View>
+          <View style={styles.hbRow}>
+            <Text style={styles.hbValue}>{userData.hb_last}</Text>
+            <Text style={styles.hbUnit}>g/dL</Text>
+          </View>
+          {/* Placeholder untuk Chart */}
+          <View style={styles.chartPlaceholder}>
+            <View style={{height: 100, width: '100%', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between'}}>
+                {[40, 50, 60, 55, 70, 80, 80].map((h, i) => (
+                    <View key={i} style={{width: 30, height: h, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderRadius: 4}} />
+                ))}
+            </View>
+            <Text style={{textAlign: 'center', color: '#999', marginTop: 10, fontSize: 12}}>Visualisasi Grafik HB</Text>
+          </View>
+        </View>
+
+        {/* Card Tips Kesehatan */}
+        <LinearGradient
+          colors={['#10b981', '#059669']} 
+          style={[styles.card, styles.tipsCard]}
+        >
+          <Text style={styles.tipsTitle}>Tahukah Kamu? 💡</Text>
+          <Text style={styles.tipsText}>
+            Vitamin D membantu penyerapan kalsium untuk tulang yang kuat. Dapatkan sinar matahari pagi 10-15 menit setiap hari!
+          </Text>
+          <TouchableOpacity style={styles.tipsButton} onPress={() => alert('Buka Tips')}>
+            <Text style={styles.tipsButtonText}>Pelajari Lebih Lanjut →</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+
+        {/* Riwayat Terbaru */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Riwayat Konsumsi Terbaru</Text>
+          
+          {[
+            { date: '12 Mei 2024', hb: '12.5', status: 'Selesai' },
+            { date: '11 Mei 2024', hb: '12.3', status: 'Selesai' },
+            { date: '10 Mei 2024', hb: '12.1', status: 'Selesai' },
+          ].map((item, index) => (
+            <View key={index} style={styles.historyItem}>
+              <View>
+                <Text style={styles.historyDate}>{item.date}</Text>
+                <Text style={styles.historyHb}>Nilai HB: {item.hb} g/dL</Text>
+              </View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{item.status}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC', // Background abu-abu muda yang bersih
+    backgroundColor: COLORS.background || '#f5f5f5', // Menggunakan variable dari theme
   },
-  scrollContent: {
-    paddingBottom: 20,
+  header: {
+    paddingTop: 60, 
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  
-  // Hero Section Styles
-  heroSection: {
-    paddingHorizontal: 20,
-    marginTop: 20,
+  headerContent: {
     marginBottom: 10,
   },
-  progressCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 20,
-    ...SHADOWS.medium,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+  greeting: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
   },
-  progressContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  progressSubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 15,
-  },
-  ringContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  // CTA Button
-  ctaButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    alignSelf: 'flex-start',
-    ...SHADOWS.small,
-  },
-  ctaText: {
-    color: COLORS.white,
-    fontWeight: '600',
+  subGreeting: {
+    color: '#dbeafe',
+    marginTop: 4,
     fontSize: 14,
   },
-
-  // Section Styles
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+  contentContainer: {
+    marginTop: 20,
+    paddingHorizontal: 24,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-
-  // Grid Styles
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
-  statsCard: {
-    width: (width - 52) / 2, // 2 kolom dengan gap
-    marginBottom: 4,
-  },
-
-  // Custom Card Style (untuk yang manual view)
-  customCard: {
-    backgroundColor: COLORS.white,
+  card: {
+    backgroundColor: 'white',
     borderRadius: 16,
-    padding: 16,
-    ...SHADOWS.small,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
+    marginBottom: 16,
   },
   cardTitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     marginBottom: 8,
   },
-  cardTrend: {
+  bigStat: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#2563eb',
+  },
+  statDivider: {
+    fontSize: 24,
+    color: '#9ca3af',
+    marginHorizontal: 4,
+    marginBottom: 6,
+  },
+  totalStat: {
+    fontSize: 24,
+    color: '#4b5563',
+    marginBottom: 6,
+  },
+  statLabel: {
+    color: '#4b5563',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 999,
+    width: '100%',
+  },
+  progressBarFill: {
+    height: 8,
+    backgroundColor: '#2563eb',
+    borderRadius: 999,
+  },
+  reportButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  reportButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  weekLabel: {
     fontSize: 12,
-    color: COLORS.success,
+    color: '#6b7280',
+  },
+  hbRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 10,
+  },
+  hbValue: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: '#dc2626',
+  },
+  hbUnit: {
+    fontSize: 16,
+    color: '#4b5563',
+    marginLeft: 4,
+  },
+  chartPlaceholder: {
+    height: 150,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10
+  },
+  tipsCard: {
+    padding: 24,
+  },
+  tipsTitle: {
+    color: 'white',
+    fontWeight: '600',
+    marginBottom: 8,
+    fontSize: 16,
+  },
+  tipsText: {
+    color: '#ecfdf5',
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  tipsButton: {
+    backgroundColor: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  tipsButtonText: {
+    color: '#059669',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  historyDate: {
     fontWeight: '500',
+    color: '#1f2937',
+    marginBottom: 2,
   },
-
-  // Chart Container
-  chartContainer: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 16,
-    ...SHADOWS.medium,
-    alignItems: 'center', // Center chart
+  historyHb: {
+    fontSize: 12,
+    color: '#6b7280',
   },
-
-  // Tips Scroll
-  tipsScroll: {
-    marginHorizontal: -20, // Negatif margin untuk full width scroll
-    paddingHorizontal: 20,
+  badge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  badgeText: {
+    color: '#16a34a',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
-
-export default HomeScreen;
