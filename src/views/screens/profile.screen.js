@@ -6,13 +6,17 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Alert,
-  StatusBar
+  StatusBar,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-// Mock Data
+// Mock Data Awal
 const MOCK_USER = {
   name: 'Aisyah Putri',
   email: 'aisyah.putri@sekolah.id',
@@ -28,7 +32,30 @@ const MOCK_USER = {
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const [user] = useState(MOCK_USER);
+  
+  // State untuk Data User
+  const [user, setUser] = useState(MOCK_USER);
+  
+  // State untuk Modal Edit
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [editData, setEditData] = useState(MOCK_USER);
+
+  // Fungsi Membuka Modal Edit
+  const handleEditPress = () => {
+    setEditData({...user}); // Copy data user saat ini ke form edit
+    setModalVisible(true);
+  };
+
+  // Fungsi Menyimpan Perubahan
+  const handleSaveProfile = () => {
+    if (!editData.name || !editData.school) {
+      Alert.alert("Error", "Nama dan Sekolah tidak boleh kosong!");
+      return;
+    }
+    setUser(editData); // Simpan data baru
+    setModalVisible(false); // Tutup modal
+    Alert.alert("Sukses", "Profil berhasil diperbarui!");
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -56,9 +83,14 @@ const ProfileScreen = () => {
             colors={['#3b82f6', '#1d4ed8']}
             style={styles.headerGradient}
           >
+            {/* Tombol Edit di Pojok Kanan Atas */}
+            <TouchableOpacity style={styles.topEditButton} onPress={handleEditPress}>
+              <Ionicons name="pencil" size={20} color="white" />
+            </TouchableOpacity>
+
             <View style={styles.headerContent}>
               <View style={styles.avatarContainer}>
-                <Text style={styles.avatarText}>{user.avatar_initial}</Text>
+                <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
                 <TouchableOpacity style={styles.editAvatarButton}>
                   <Ionicons name="camera" size={16} color="#3b82f6" />
                 </TouchableOpacity>
@@ -105,11 +137,97 @@ const ProfileScreen = () => {
             />
           </View>
 
-          {/* Menu Pengaturan Akun (Tanpa Report Form) */}
+          {/* Menu Logout */}
+          <Text style={styles.sectionTitle}>Pengaturan</Text>
+          <View style={styles.menuContainer}>
+             <MenuItem 
+                icon="log-out-outline" 
+                label="Keluar Aplikasi" 
+                onPress={handleLogout} 
+                isDestructive 
+             />
+          </View>
 
+          <Text style={styles.versionText}>Versi Aplikasi 1.0.0</Text>
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
+
+      {/* --- MODAL EDIT PROFIL --- */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profil</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nama Lengkap</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editData.name}
+                  onChangeText={(text) => setEditData({...editData, name: text})}
+                  placeholder="Masukkan nama lengkap"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nama Sekolah</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editData.school}
+                  onChangeText={(text) => setEditData({...editData, school: text})}
+                  placeholder="Masukkan nama sekolah"
+                />
+              </View>
+
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.label}>Tinggi (cm)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={String(editData.stats.height)}
+                    onChangeText={(text) => setEditData({
+                      ...editData, 
+                      stats: {...editData.stats, height: text}
+                    })}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={styles.label}>Berat (kg)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={String(editData.stats.weight)}
+                    onChangeText={(text) => setEditData({
+                      ...editData, 
+                      stats: {...editData.stats, weight: text}
+                    })}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+              <Text style={styles.saveButtonText}>Simpan Perubahan</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </View>
   );
 };
@@ -168,6 +286,17 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 30,
     alignItems: 'center',
+    position: 'relative',
+  },
+  // Style Baru untuk Tombol Edit di Header
+  topEditButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 8,
+    borderRadius: 20,
+    zIndex: 10,
   },
   headerContent: {
     alignItems: 'center',
@@ -306,19 +435,74 @@ const styles = StyleSheet.create({
   destructiveText: {
     color: '#ef4444',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#f3f4f6',
-    marginVertical: 8,
-    marginHorizontal: 12,
-  },
   versionText: {
     textAlign: 'center',
     color: '#9ca3af',
     fontSize: 12,
     marginTop: 24,
     marginBottom: 20,
-  }
+  },
+
+  // --- Styles Modal Edit ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4b5563',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  saveButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default ProfileScreen;
