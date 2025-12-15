@@ -1,281 +1,508 @@
-/**
- * Modiva - Notification Model
- * Notification data model with validation and transformations
- * @module models/Notification
- */
-import { NotificationTypes } from '../config/constants.js';
-import { Logger } from '../utils/logger.js';
-/**
- * Notification Model Class
- */
-export class NotificationModel {
-    constructor(data = {}) {
-        this.id = data.id || null;
-        this.userId = data.userId || data.user_id || null;
-        this.type = data.type || NotificationTypes.INFO;
-        this.title = data.title || '';
-        this.message = data.message || '';
-        this.icon = data.icon || 'info';
-        this.color = data.color || 'blue';
-        this.data = data.data || null;
-        this.read = data.read || false;
-        this.actionUrl = data.actionUrl || data.action_url || null;
-        this.timestamp = data.timestamp || data.created_at || Date.now();
-        this.expiresAt = data.expiresAt || data.expires_at || null;
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  Alert,
+  StatusBar,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+
+// Mock Data Awal
+const MOCK_USER = {
+  name: 'Aisyah Putri',
+  email: 'aisyah.putri@sekolah.id',
+  school: 'SMA Negeri 1 Jakarta',
+  avatar_initial: 'A',
+  stats: {
+    height: 160,
+    weight: 50,
+    hb: 12.5,
+    consumption: '8/48'
+  }
+};
+
+const ProfileScreen = () => {
+  const router = useRouter();
+  
+  // State untuk Data User
+  const [user, setUser] = useState(MOCK_USER);
+  
+  // State untuk Modal Edit
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [editData, setEditData] = useState(MOCK_USER);
+
+  // Fungsi Membuka Modal Edit
+  const handleEditPress = () => {
+    setEditData({...user}); // Copy data user saat ini ke form edit
+    setModalVisible(true);
+  };
+
+  // Fungsi Menyimpan Perubahan
+  const handleSaveProfile = () => {
+    if (!editData.name || !editData.school) {
+      Alert.alert("Error", "Nama dan Sekolah tidak boleh kosong!");
+      return;
     }
-    /**
-     * Validate notification data
-     * @returns {object} - { valid: boolean, errors: array }
-     */
-    validate() {
-        const errors = [];
-        // Validate type
-        if (!Object.values(NotificationTypes).includes(this.type)) {
-            errors.push({
-                field: 'type',
-                message: 'Tipe notifikasi tidak valid'
-            });
+    setUser(editData); // Simpan data baru
+    setModalVisible(false); // Tutup modal
+    Alert.alert("Sukses", "Profil berhasil diperbarui!");
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Keluar", 
+      "Apakah Anda yakin ingin keluar?",
+      [
+        { text: "Batal", style: "cancel" },
+        { 
+          text: "Keluar", 
+          style: "destructive", 
+          onPress: () => router.replace('/login') 
         }
-        // Validate title
-        if (!this.title || this.title.trim().length === 0) {
-            errors.push({
-                field: 'title',
-                message: 'Judul notifikasi harus diisi'
-            });
-        }
-        // Validate message
-        if (!this.message || this.message.trim().length === 0) {
-            errors.push({
-                field: 'message',
-                message: 'Pesan notifikasi harus diisi'
-            });
-        }
-        return {
-            valid: errors.length === 0,
-            errors
-        };
-    }
-    /**
-     * Check if notification is read
-     * @returns {boolean}
-     */
-    isRead() {
-        return this.read === true;
-    }
-    /**
-     * Check if notification is expired
-     * @returns {boolean}
-     */
-    isExpired() {
-        if (!this.expiresAt) return false;
-        return Date.now() > new Date(this.expiresAt).getTime();
-    }
-    /**
-     * Get notification age in minutes
-     * @returns {number}
-     */
-    getAgeInMinutes() {
-        const now = Date.now();
-        const timestamp = new Date(this.timestamp).getTime();
-        return Math.floor((now - timestamp) / (1000 * 60));
-    }
-    /**
-     * Get notification age in hours
-     * @returns {number}
-     */
-    getAgeInHours() {
-        return Math.floor(this.getAgeInMinutes() / 60);
-    }
-    /**
-     * Get notification age in days
-     * @returns {number}
-     */
-    getAgeInDays() {
-        return Math.floor(this.getAgeInHours() / 24);
-    }
-    /**
-     * Get relative time string
-     * @returns {string}
-     */
-    getRelativeTime() {
-        const minutes = this.getAgeInMinutes();
-        if (minutes < 1) return 'Baru saja';
-        if (minutes < 60) return `${minutes} menit yang lalu`;
-        const hours = this.getAgeInHours();
-        if (hours < 24) return `${hours} jam yang lalu`;
-        const days = this.getAgeInDays();
-        if (days < 7) return `${days} hari yang lalu`;
-        if (days < 30) return `${Math.floor(days / 7)} minggu yang lalu`;
-        if (days < 365) return `${Math.floor(days / 30)} bulan yang lalu`;
-        return `${Math.floor(days / 365)} tahun yang lalu`;
-    }
-    /**
-     * Get formatted timestamp
-     * @returns {string}
-     */
-    getFormattedTimestamp() {
-        const date = new Date(this.timestamp);
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
-    }
-    /**
-     * Get icon SVG path
-     * @returns {string}
-     */
-    getIconSVGPath() {
-        const iconPaths = {
-            bell: 'M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z',
-            check: 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z',
-            'thumbs-up': 'M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z',
-            info: 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z',
-            warning: 'M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z',
-            error: 'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z',
-            trophy: 'M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z'
-        };
-        return iconPaths[this.icon] || iconPaths.info;
-    }
-    /**
-     * Get color classes
-     * @returns {object}
-     */
-    getColorClasses() {
-        const colorMap = {
-            blue: {
-                bg: 'bg-blue-100',
-                text: 'text-blue-600',
-                border: 'border-blue-500'
-            },
-            green: {
-                bg: 'bg-green-100',
-                text: 'text-green-600',
-                border: 'border-green-500'
-            },
-            yellow: {
-                bg: 'bg-yellow-100',
-                text: 'text-yellow-600',
-                border: 'border-yellow-500'
-            },
-            red: {
-                bg: 'bg-red-100',
-                text: 'text-red-600',
-                border: 'border-red-500'
-            },
-            purple: {
-                bg: 'bg-purple-100',
-                text: 'text-purple-600',
-                border: 'border-purple-500'
-            }
-        };
-        return colorMap[this.color] || colorMap.blue;
-    }
-    /**
-     * Mark as read
-     * @returns {NotificationModel}
-     */
-    markAsRead() {
-        this.read = true;
-        return this;
-    }
-    /**
-     * Mark as unread
-     * @returns {NotificationModel}
-     */
-    markAsUnread() {
-        this.read = false;
-        return this;
-    }
-    /**
-     * Convert to JSON
-     * @returns {object}
-     */
-    toJSON() {
-        return {
-            id: this.id,
-            userId: this.userId,
-            type: this.type,
-            title: this.title,
-            message: this.message,
-            icon: this.icon,
-            color: this.color,
-            data: this.data,
-            read: this.read,
-            actionUrl: this.actionUrl,
-            timestamp: this.timestamp,
-            expiresAt: this.expiresAt
-        };
-    }
-    /**
-     * Convert to API format (snake_case)
-     * @returns {object}
-     */
-    toAPIFormat() {
-        return {
-            id: this.id,
-            user_id: this.userId,
-            type: this.type,
-            title: this.title,
-            message: this.message,
-            icon: this.icon,
-            color: this.color,
-            data: this.data,
-            read: this.read,
-            action_url: this.actionUrl,
-            timestamp: this.timestamp,
-            expires_at: this.expiresAt
-        };
-    }
-    /**
-     * Get summary data
-     * @returns {object}
-     */
-    getSummary() {
-        return {
-            id: this.id,
-            type: this.type,
-            title: this.title,
-            message: this.message.substring(0, 100) + (this.message.length > 100 ? '...' : ''),
-            read: this.read,
-            relativeTime: this.getRelativeTime(),
-            color: this.color
-        };
-    }
-    /**
-     * Create from API response
-     * @param {object} data - API response data
-     * @returns {NotificationModel}
-     */
-    static fromAPIResponse(data) {
-        return new NotificationModel({
-            id: data.id,
-            userId: data.user_id,
-            type: data.type,
-            title: data.title,
-            message: data.message,
-            icon: data.icon,
-            color: data.color,
-            data: data.data,
-            read: data.read,
-            actionUrl: data.action_url,
-            timestamp: data.timestamp || data.created_at,
-            expiresAt: data.expires_at
-        });
-    }
-    /**
-     * Clone notification
-     * @returns {NotificationModel}
-     */
-    clone() {
-        return new NotificationModel(this.toJSON());
-    }
-    /**
-     * Log notification info (for debugging)
-     */
-    log() {
-        Logger.info('Notification Model:', this.toJSON());
-    }
-}
-export default NotificationModel;
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header Section */}
+        <View style={styles.headerWrapper}>
+          <LinearGradient
+            colors={['#3b82f6', '#1d4ed8']}
+            style={styles.headerGradient}
+          >
+            {/* Tombol Edit di Pojok Kanan Atas */}
+            <TouchableOpacity style={styles.topEditButton} onPress={handleEditPress}>
+              <Ionicons name="pencil" size={20} color="white" />
+            </TouchableOpacity>
+
+            <View style={styles.headerContent}>
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+                <TouchableOpacity style={styles.editAvatarButton}>
+                  <Ionicons name="camera" size={16} color="#3b82f6" />
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
+              
+              <View style={styles.schoolBadge}>
+                <Ionicons name="school-outline" size={14} color="white" />
+                <Text style={styles.schoolText}>{user.school}</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
+        <View style={styles.bodyContent}>
+          {/* Statistik Kesehatan */}
+          <Text style={styles.sectionTitle}>Statistik Kesehatan</Text>
+          <View style={styles.statsGrid}>
+            <StatCard 
+              label="Tinggi Badan" 
+              value={`${user.stats.height} cm`} 
+              icon="resize-outline" 
+              color="#10b981" 
+            />
+            <StatCard 
+              label="Berat Badan" 
+              value={`${user.stats.weight} kg`} 
+              icon="scale-outline" 
+              color="#f59e0b" 
+            />
+            <StatCard 
+              label="Hemoglobin" 
+              value={`${user.stats.hb} g/dL`} 
+              icon="water-outline" 
+              color="#ef4444" 
+            />
+            <StatCard 
+              label="Target TTD" 
+              value={user.stats.consumption} 
+              icon="medkit-outline" 
+              color="#3b82f6" 
+            />
+          </View>
+
+          {/* Menu Logout */}
+          <Text style={styles.sectionTitle}>Pengaturan</Text>
+          <View style={styles.menuContainer}>
+             <MenuItem 
+                icon="log-out-outline" 
+                label="Keluar Aplikasi" 
+                onPress={handleLogout} 
+                isDestructive 
+             />
+          </View>
+
+          <Text style={styles.versionText}>Versi Aplikasi 1.0.0</Text>
+          <View style={{ height: 100 }} />
+        </View>
+      </ScrollView>
+
+      {/* --- MODAL EDIT PROFIL --- */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profil</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nama Lengkap</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editData.name}
+                  onChangeText={(text) => setEditData({...editData, name: text})}
+                  placeholder="Masukkan nama lengkap"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nama Sekolah</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editData.school}
+                  onChangeText={(text) => setEditData({...editData, school: text})}
+                  placeholder="Masukkan nama sekolah"
+                />
+              </View>
+
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.label}>Tinggi (cm)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={String(editData.stats.height)}
+                    onChangeText={(text) => setEditData({
+                      ...editData, 
+                      stats: {...editData.stats, height: text}
+                    })}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={styles.label}>Berat (kg)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={String(editData.stats.weight)}
+                    onChangeText={(text) => setEditData({
+                      ...editData, 
+                      stats: {...editData.stats, weight: text}
+                    })}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+              <Text style={styles.saveButtonText}>Simpan Perubahan</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+    </View>
+  );
+};
+
+// --- Sub-components ---
+
+const StatCard = ({ label, value, icon, color }) => (
+  <View style={styles.statCard}>
+    <View style={[styles.iconBox, { backgroundColor: `${color}20` }]}>
+      <Ionicons name={icon} size={24} color={color} />
+    </View>
+    <View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  </View>
+);
+
+const MenuItem = ({ icon, label, onPress, isDestructive }) => (
+  <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+    <View style={styles.menuLeft}>
+      <View style={[styles.menuIconBox, isDestructive && styles.destructiveIconBox]}>
+        <Ionicons 
+          name={icon} 
+          size={22} 
+          color={isDestructive ? '#ef4444' : '#4b5563'} 
+        />
+      </View>
+      <Text style={[styles.menuLabel, isDestructive && styles.destructiveText]}>
+        {label}
+      </Text>
+    </View>
+    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+  </TouchableOpacity>
+);
+
+// --- Styles ---
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+  },
+  headerWrapper: {
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerGradient: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  // Style Baru untuk Tombol Edit di Header
+  topEditButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 8,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  headerContent: {
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 16,
+    position: 'relative',
+  },
+  avatarText: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+  },
+  editAvatarButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 8,
+    borderRadius: 20,
+    elevation: 2,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#dbeafe',
+    marginBottom: 12,
+  },
+  schoolBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  schoolText: {
+    color: 'white',
+    fontSize: 12,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  bodyContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  iconBox: {
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  menuContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  destructiveIconBox: {
+    backgroundColor: '#fef2f2',
+  },
+  menuLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  destructiveText: {
+    color: '#ef4444',
+  },
+  versionText: {
+    textAlign: 'center',
+    color: '#9ca3af',
+    fontSize: 12,
+    marginTop: 24,
+    marginBottom: 20,
+  },
+
+  // --- Styles Modal Edit ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4b5563',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  saveButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+
+export default ProfileScreen;
