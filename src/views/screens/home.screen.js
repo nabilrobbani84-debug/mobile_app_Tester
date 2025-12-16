@@ -98,7 +98,10 @@ export default function HomeScreen() {
           <Text style={styles.tipsText}>
             Vitamin D membantu penyerapan kalsium untuk tulang yang kuat. Dapatkan sinar matahari pagi 10-15 menit setiap hari!
           </Text>
-          <TouchableOpacity style={styles.tipsButton} onPress={() => alert('Buka Tips')}>
+          <TouchableOpacity 
+            style={styles.tipsButton} 
+            onPress={() => router.push('/health-tips')}
+          >
             <Text style={styles.tipsButtonText}>Pelajari Lebih Lanjut →</Text>
           </TouchableOpacity>
         </LinearGradient>
