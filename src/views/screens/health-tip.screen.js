@@ -1,126 +1,136 @@
-/**
- * Modiva - Health Tip Screen
- * Display health tips and educational content
- * @module views/screens/health-tip
- */
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../../config/theme'; // Pastikan path ini sesuai
 
-import { Logger } from '../../utils/logger.js';
-import { analyticsService, EventTypes } from '../../services/analytics/analytics.service.js';
+const tipsData = [
+  {
+    id: 1,
+    emoji: '💡',
+    title: 'Tahukah Kamu?',
+    description: 'Vitamin D berperan penting dalam penyerapan kalsium untuk kesehatan tulang.',
+    colors: ['#4ade80', '#3b82f6'] // Green to Blue
+  },
+  {
+    id: 2,
+    emoji: '🥛',
+    title: 'Tips Sehat',
+    description: 'Minum susu yang diperkaya vitamin D untuk meningkatkan kesehatan tulang.',
+    colors: ['#c084fc', '#ec4899'] // Purple to Pink
+  },
+  {
+    id: 3,
+    emoji: '☀️',
+    title: 'Sinar Matahari',
+    description: 'Paparan sinar matahari pagi 10-15 menit membantu produksi vitamin D.',
+    colors: ['#facc15', '#f97316'] // Yellow to Orange
+  },
+  {
+    id: 4,
+    emoji: '🐟',
+    title: 'Makanan Sehat',
+    description: 'Ikan berlemak seperti salmon kaya akan vitamin D alami.',
+    colors: ['#60a5fa', '#06b6d4'] // Blue to Cyan
+  }
+];
 
-/**
- * Health Tip Screen Component
- */
-export const HealthTipScreen = {
-    /**
-     * Screen ID
-     */
-    id: 'healthTipScreen',
+export default function HealthTipScreen() {
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#1f2937" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Tips Kesehatan</Text>
+      </View>
 
-    /**
-     * Initialize health tip screen
-     */
-    init() {
-        Logger.info('💡 HealthTipScreen: Initializing');
-        
-        this.render();
-        this.trackView();
-        this.attachEventListeners();
-    },
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.subtitle}>
+          Informasi penting untuk menjaga kesehatan dan asupan vitamin Anda.
+        </Text>
 
-    /**
-     * Render screen
-     */
-    render() {
-        const container = document.getElementById(this.id);
-        
-        if (!container) {
-            Logger.error('Health tip screen container not found');
-            return;
-        }
+        {tipsData.map((item) => (
+          <LinearGradient
+            key={item.id}
+            colors={item.colors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.card}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.emoji}>{item.emoji}</Text>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+            </View>
+            <Text style={styles.cardDescription}>{item.description}</Text>
+          </LinearGradient>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
 
-        container.classList.add('active');
-    },
-
-    /**
-     * Track page view
-     */
-    trackView() {
-        analyticsService.trackEvent(EventTypes.HEALTH_TIP_VIEW, {
-            tip: 'vitamin_d_role',
-            source: 'dashboard'
-        });
-    },
-
-    /**
-     * Attach event listeners
-     */
-    attachEventListeners() {
-        // Back button
-        const backButton = document.querySelector('#healthTipScreen button[onclick*="homeScreen"]');
-        if (backButton) {
-            backButton.onclick = () => {
-                this.navigateBack();
-            };
-        }
-
-        // Share button (if exists)
-        const shareButton = document.querySelector('#healthTipScreen .share-btn');
-        if (shareButton) {
-            shareButton.addEventListener('click', () => {
-                this.handleShare();
-            });
-        }
-    },
-
-    /**
-     * Navigate back to home
-     */
-    navigateBack() {
-        Logger.info('⬅️ HealthTipScreen: Navigating back');
-        
-        import('../../routes/router.js').then(({ Router }) => {
-            Router.navigate('home');
-        }).catch(() => {
-            const Navigation = window.Navigation;
-            if (Navigation) {
-                Navigation.navigateTo('homeScreen');
-            }
-        });
-    },
-
-    /**
-     * Handle share
-     */
-    handleShare() {
-        Logger.info('📤 HealthTipScreen: Sharing');
-        
-        analyticsService.trackEvent(EventTypes.HEALTH_TIP_SHARE, {
-            tip: 'vitamin_d_role'
-        });
-
-        if (navigator.share) {
-            navigator.share({
-                title: 'Peran Vital Vitamin D',
-                text: 'Vitamin D membantu penyerapan kalsium untuk tulang yang kuat.',
-                url: window.location.href
-            }).catch(err => {
-                Logger.error('Share failed:', err);
-            });
-        } else {
-            // Fallback: Copy to clipboard
-            const url = window.location.href;
-            navigator.clipboard.writeText(url).then(() => {
-                alert('Link berhasil disalin!');
-            });
-        }
-    },
-
-    /**
-     * Cleanup
-     */
-    cleanup() {
-        Logger.info('🧹 HealthTipScreen: Cleanup');
-    }
-};
-
-export default HealthTipScreen;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emoji: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: 'white',
+    lineHeight: 22,
+    opacity: 0.9,
+  },
+});
