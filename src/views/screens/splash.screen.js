@@ -1,175 +1,282 @@
-  // app/(auth)/SplashScreen.tsx
-  import React, { useEffect } from 'react';
-  import {
-    View,
-    Text,
-    Image,
-    StyleSheet,
-    Dimensions,
-    SafeAreaView,
-    StatusBar,
-    Platform,
-  } from 'react-native';
-  import { useRouter } from 'expo-router';
-  import { LinearGradient } from 'expo-linear-gradient';
+// src/views/screens/splash.screen.js
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  Platform,
+  useWindowDimensions,
+  Animated,
+  Easing,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
-  // Import konfigurasi tema
-  import { COLORS, FONTS } from '../../config/theme';
+// Import konfigurasi tema
+import { COLORS, FONTS } from '../../config/theme';
 
-  const { width, height } = Dimensions.get('window');
+const SplashScreen = () => {
+  const router = useRouter();
+  const { width } = useWindowDimensions();
 
-  // Tinggi referensi (iPhone X/11) supaya scaling vertikal konsisten
-  const BASE_HEIGHT = 812;
-  const vh = (value: number) => (height / BASE_HEIGHT) * value;
+  // --- Animation Values (Refs) ---
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current; // Slide distance slightly reduced for subtlety
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Ukuran turunan
-  const LOGO_SIZE = width * 0.21;              // ukuran icon tetes darah
-  const CARD_WIDTH = width - 2 * 18;           // margin kiri‑kanan ≈ 18px
-  const CARD_HEIGHT = CARD_WIDTH * 1.06;       // proporsi panel kapsul
-  const PROGRESS_WIDTH = width * 0.8;          // lebar progress bar
+  // --- Logic & Animation Sequence ---
+  useEffect(() => {
+    // 1. Animasi Elemen Masuk (Fade In + Slide Up)
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+    ]).start();
 
-  const SplashScreen = () => {
-    const router = useRouter();
+    // 2. Animasi Progress Bar
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: 3000,
+      useNativeDriver: false, 
+      easing: Easing.linear,
+    }).start();
 
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        router.replace('/login');
-      }, 3000);
+    // 3. Navigasi Otomatis
+    const timer = setTimeout(() => {
+      router.replace('/login');
+    }, 3000);
 
-      return () => clearTimeout(timer);
-    }, [router]);
+    return () => clearTimeout(timer);
+  }, [router, fadeAnim, slideAnim, progressAnim]);
 
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor={COLORS?.white || '#FFFFFF'}
-        />
+  // --- Kalkulasi Dimensi Responsif ---
+  const contentWidth = Math.min(width, 450); // Maksimum lebar konten agar elegan di tablet
+  const LOGO_SIZE = contentWidth * 0.20; // Ukuran logo proporsional
+  const CARD_WIDTH = contentWidth - 56;  // Margin kiri-kanan (28px x 2)
+  const CARD_HEIGHT = CARD_WIDTH * 1.06; // Rasio tinggi kartu
+  const PROGRESS_WIDTH = contentWidth * 0.82; // Lebar progress bar
 
-        <View style={styles.content}>
-          {/* ---------- LOGO + NAMA APP ---------- */}
-          <View style={styles.header}>
-            <Image
-              source={require('../../../assets/images/Logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.title}>Modiva</Text>
-          </View>
+  // Interpolasi Lebar Progress Bar
+  const progressWidthInterpolated = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
-          {/* ---------- PANEL KAPSUL ---------- */}
-          <View style={styles.cardWrapper}>
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={true}
+      />
+
+      <View style={styles.mainWrapper}>
+        
+        {/* === HEADER: Logo & Brand Name === */}
+        <Animated.View 
+          style={[
+            styles.topSection,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          <Image
+            source={require('../../../assets/images/Logo.png')} //
+            style={{ 
+              width: LOGO_SIZE, 
+              height: LOGO_SIZE, 
+              marginBottom: 10,
+            }}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandName} allowFontScaling={false}>
+            Modiva
+          </Text>
+        </Animated.View>
+
+        {/* === CONTENT: Card Container === */}
+        <Animated.View 
+          style={[
+            styles.middleSection,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          <View 
+            style={[
+              styles.cardContainer, 
+              { width: CARD_WIDTH, height: CARD_HEIGHT }
+            ]}
+          >
+            {/* Gradient Background */}
             <LinearGradient
-              colors={['#DBDEE4', '#F5F6F8']}  // abu‑abu gradien seperti desain
+              colors={['#DBDEE4', '#F5F6F8']} // Warna Silver Halus
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
-              style={styles.card}
+              style={styles.cardGradient}
             >
-              <Image
-                source={require('../../../assets/images/capsul.png')}
-                style={styles.capsule}
-                resizeMode="contain"
-              />
+              {/* Inner Border Effect */}
+              <View style={styles.cardInnerBorder}>
+                <Image
+                  source={require('../../../assets/images/capsul.png')} //
+                  style={{
+                    width: CARD_WIDTH * 0.65, // Ukuran gambar di dalam kartu
+                    height: CARD_HEIGHT * 0.75,
+                  }}
+                  resizeMode="contain"
+                />
+              </View>
             </LinearGradient>
           </View>
+        </Animated.View>
 
-          {/* ---------- TEKS + PROGRESS BAR ---------- */}
-          <View style={styles.bottom}>
-            <Text style={styles.subtitle}>
-              Pantau kesehatan, Rutin Minum Vitamin
-            </Text>
+        {/* === FOOTER: Tagline & Progress Bar === */}
+        <Animated.View 
+          style={[
+            styles.bottomSection,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          <Text style={styles.tagline} allowFontScaling={false}>
+            Pantau kesehatan, Rutin Minum Vitamin
+          </Text>
 
-            <View style={styles.progressTrack}>
+          {/* Progress Bar Track */}
+          <View style={[styles.progressTrack, { width: PROGRESS_WIDTH }]}>
+            {/* Progress Bar Fill */}
+            <Animated.View 
+              style={[
+                styles.progressFillWrapper, 
+                { width: progressWidthInterpolated }
+              ]}
+            >
               <LinearGradient
                 colors={['#F46AD9', '#B96DF7', '#24C5FF', '#0082C8']}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
-                style={styles.progressFill}
+                style={styles.progressFillGradient}
               />
-            </View>
+            </Animated.View>
           </View>
-        </View>
-      </SafeAreaView>
-    );
-  };
+        </Animated.View>
 
-  // ---------- STYLES ----------
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: COLORS?.white || '#FFFFFF',
-    },
-    content: {
-      flex: 1,
-      alignItems: 'center',
-    },
+      </View>
+    </SafeAreaView>
+  );
+};
 
-    /* ===== HEADER (Logo + "Modiva") ===== */
-    header: {
-      alignItems: 'center',
-      marginTop: vh(32), // jarak dari atas ke logo
-    },
-    logo: {
-      width: LOGO_SIZE,
-      height: LOGO_SIZE,
-      marginBottom: vh(10),
-    },
-    title: {
-      fontSize: 30,
-      lineHeight: 34,
-      letterSpacing: 0.3,
-      color: COLORS?.black || '#111827',
-      fontFamily:
-        FONTS?.bold?.fontFamily || (Platform.OS === 'ios' ? 'System' : 'sans-serif'),
-      fontWeight: '800',
-    },
+// ---------- STYLES ----------
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS?.white || '#FFFFFF',
+  },
+  mainWrapper: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 32, // Sedikit lebih lega vertikal
+  },
 
-    /* ===== PANEL KAPSUL ===== */
-    cardWrapper: {
-      marginTop: vh(40), // jarak dari teks "Modiva" ke panel kapsul
-    },
-    card: {
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      borderRadius: 0,          // panel kotak seperti di gambar
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    capsule: {
-      width: CARD_WIDTH * 0.7,  // ukuran kapsul di dalam panel
-      height: CARD_HEIGHT * 0.8,
-    },
+  /* SECTION LAYOUTS */
+  topSection: {
+    flex: 0.25, 
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 20,
+  },
+  middleSection: {
+    flex: 0.55,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  bottomSection: {
+    flex: 0.20,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 10,
+  },
 
-    /* ===== BAGIAN BAWAH (Teks + Progress) ===== */
-    bottom: {
-      marginTop: 'auto',        // dorong ke bawah
-      marginBottom: vh(40),
-      alignItems: 'center',
-    },
-    subtitle: {
-      fontSize: 14,
-      lineHeight: 20,
-      color: '#9CA3AF',         // abu‑abu mirip desain
-      fontFamily:
-        FONTS?.medium?.fontFamily || (Platform.OS === 'ios' ? 'System' : 'sans-serif'),
-      fontWeight: '600',
-      textAlign: 'center',
-      marginBottom: vh(18),
-    },
+  /* TYPOGRAPHY */
+  brandName: {
+    fontSize: 32,
+    color: COLORS?.black || '#111827',
+    fontFamily: FONTS?.bold?.fontFamily || (Platform.OS === 'ios' ? 'System' : 'sans-serif'),
+    fontWeight: '800',
+    letterSpacing: 0.5, // Sedikit renggang agar elegan
+    lineHeight: 38,
+  },
+  tagline: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontFamily: FONTS?.medium?.fontFamily || (Platform.OS === 'ios' ? 'System' : 'sans-serif'),
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 20,
+    letterSpacing: 0.2,
+  },
 
-    /* ===== PROGRESS BAR ===== */
-    progressTrack: {
-      width: PROGRESS_WIDTH,
-      height: 10,
-      borderRadius: 999,
-      backgroundColor: '#E5E7EB', // sedikit abu‑abu di luar gradien
-      overflow: 'hidden',
-    },
-    progressFill: {
-      width: '100%',
-      height: '100%',
-      borderRadius: 999,
-    },
-  });
+  /* CARD STYLES */
+  cardContainer: {
+    // Shadow Props
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    
+    // Android Elevation Fix: Background color wajib ada agar elevation muncul
+    backgroundColor: '#DBDEE4', 
+    elevation: 10,
+    
+    borderRadius: 4, // Radius kecil sesuai desain "kotak" tapi tidak tajam
+  },
+  cardGradient: {
+    flex: 1,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cardInnerBorder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)', // Efek border putih halus (depth)
+    borderRadius: 4,
+  },
 
-  export default SplashScreen;
+  /* PROGRESS BAR STYLES */
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#F3F4F6',
+    overflow: 'hidden',
+    borderWidth: 0.5,
+    borderColor: '#E5E7EB',
+  },
+  progressFillWrapper: {
+    height: '100%',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  progressFillGradient: {
+    flex: 1,
+    width: '100%',
+  },
+});
+
+export default SplashScreen;
