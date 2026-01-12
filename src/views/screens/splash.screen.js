@@ -1,25 +1,25 @@
 // src/views/screens/splash.screen.js
+import { LinearGradient } from 'expo-linear-gradient';
+// import { useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Platform,
-  useWindowDimensions,
-  Animated,
-  Easing,
+    Animated,
+    Easing,
+    Image,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Import konfigurasi tema
 import { COLORS, FONTS } from '../../config/theme';
 
-const SplashScreen = () => {
-  const router = useRouter();
+const SplashScreen = ({ onAnimationComplete }) => {
+  // const router = useRouter();
   const { width } = useWindowDimensions();
 
   // --- Animation Values (Refs) ---
@@ -27,6 +27,7 @@ const SplashScreen = () => {
   const slideAnim = useRef(new Animated.Value(40)).current; // Slide distance slightly reduced for subtlety
   const progressAnim = useRef(new Animated.Value(0)).current;
 
+  // --- Logic & Animation Sequence ---
   // --- Logic & Animation Sequence ---
   useEffect(() => {
     // 1. Animasi Elemen Masuk (Fade In + Slide Up)
@@ -53,13 +54,15 @@ const SplashScreen = () => {
       easing: Easing.linear,
     }).start();
 
-    // 3. Navigasi Otomatis
+    // 3. Signal Animation Complete
     const timer = setTimeout(() => {
-      router.replace('/login');
+      if (onAnimationComplete) {
+        onAnimationComplete();
+      }
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [router, fadeAnim, slideAnim, progressAnim]);
+  }, [fadeAnim, slideAnim, progressAnim, onAnimationComplete]);
 
   // --- Kalkulasi Dimensi Responsif ---
   const contentWidth = Math.min(width, 450); // Maksimum lebar konten agar elegan di tablet
