@@ -1,3 +1,4 @@
+// src/views/screens/reports.screen.js
 import React, { useEffect, useState, useCallback } from 'react';
 import { 
   StyleSheet, 
@@ -7,28 +8,33 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  Dimensions,
-  StatusBar 
+  StatusBar,
+  Alert,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-// --- PERBAIKAN IMPORT DI SINI ---
-// Hapus 'src/' karena kita sudah berada di dalam folder src (via ../..)
+// --- Library Tambahan untuk Excel ---
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import XLSX from 'xlsx';
+
+// --- Import Controller & Store ---
 import { ReportController } from '../../controllers/report.controller';
 import { store } from '../../state/store';
 
 // --- Theme Colors ---
 const COLORS = {
-  background: '#F8F9FA', // Abu-abu sangat muda (bersih)
-  primary: '#3B82F6',    // Biru utama
+  background: '#F8F9FA',
+  primary: '#3B82F6',
   cardBg: '#FFFFFF',
-  textMain: '#111827',   // Hitam soft
-  textSub: '#6B7280',    // Abu-abu text
-  success: '#10B981',    // Hijau
-  warning: '#F59E0B',    // Oranye
-  danger: '#EF4444',     // Merah
+  textMain: '#111827',
+  textSub: '#6B7280',
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
   border: '#E5E7EB',
 };
 
@@ -68,13 +74,75 @@ const ReportsScreen = () => {
     loadData();
   }, []);
 
+  // --- Logic Download Excel ---
+  const handleDownloadExcel = async () => {
+    if (reports.length === 0) {
+      Alert.alert('Info', 'Belum ada data laporan untuk diunduh.');
+      return;
+    }
+
+    try {
+      // 1. Format Data untuk Excel
+      const dataToExport = reports.map((item) => ({
+        'Tanggal Pemeriksaan': item.date || '-',
+        'Nilai HB (g/dL)': item.hb_value || 0,
+        'Status': getStatusText(item.hb_value),
+        'Catatan': item.notes || '-'
+      }));
+
+      // 2. Buat Worksheet dan Workbook
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Laporan Kesehatan");
+
+      // Atur lebar kolom agar rapi
+      ws['!cols'] = [
+        { wch: 20 }, // Tanggal
+        { wch: 15 }, // Nilai HB
+        { wch: 15 }, // Status
+        { wch: 40 }  // Catatan
+      ];
+
+      // 3. Generate file output (base64)
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+      // 4. Tentukan lokasi simpan sementara
+      // Gunakan nama file yang aman (tanpa spasi aneh)
+      const safeName = userInfo.name ? userInfo.name.replace(/[^a-zA-Z0-9]/g, '_') : 'User';
+      const fileName = `Laporan_HB_${safeName}_${new Date().getTime()}.xlsx`;
+      const fileUri = FileSystem.cacheDirectory + fileName;
+
+      // 5. Tulis file ke system
+      await FileSystem.writeAsStringAsync(fileUri, wbout, {
+        encoding: FileSystem.EncodingType.Base64
+      });
+
+      // 6. Share / Open File Dialog
+      const isSharingAvailable = await Sharing.isAvailableAsync();
+      if (!isSharingAvailable) {
+        Alert.alert("Error", "Fitur sharing tidak tersedia di perangkat ini");
+        return;
+      }
+
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        dialogTitle: 'Download Laporan Excel',
+        UTI: 'com.microsoft.excel.xlsx' // Spesifik untuk iOS
+      });
+
+    } catch (error) {
+      console.error("Download error:", error);
+      Alert.alert("Gagal", "Terjadi kesalahan saat mengunduh laporan.");
+    }
+  };
+
   // --- Helper: Status Badge Color ---
   const getStatusColor = (hbValue) => {
     const val = parseFloat(hbValue);
     if (isNaN(val)) return COLORS.textSub;
-    if (val >= 12) return COLORS.success; // Normal
-    if (val >= 10) return COLORS.warning; // Sedikit rendah
-    return COLORS.danger; // Rendah
+    if (val >= 12) return COLORS.success;
+    if (val >= 10) return COLORS.warning;
+    return COLORS.danger;
   };
 
   const getStatusText = (hbValue) => {
@@ -91,16 +159,29 @@ const ReportsScreen = () => {
       
       {/* --- Header --- */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Laporan Kesehatan</Text>
           <Text style={styles.headerSubtitle}>Pantau perkembangan HB-mu</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={() => router.push('/(tabs)/profil')}
-        >
-          <Ionicons name="person-circle-outline" size={32} color={COLORS.primary} />
-        </TouchableOpacity>
+        
+        <View style={styles.headerActions}>
+            {/* Tombol Download Excel */}
+            <TouchableOpacity 
+              style={styles.iconButton}
+              onPress={handleDownloadExcel}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="file-excel-box" size={32} color={COLORS.success} />
+            </TouchableOpacity>
+
+            {/* Tombol Profil */}
+            <TouchableOpacity 
+              style={styles.iconButton}
+              onPress={() => router.push('/(tabs)/profil')}
+            >
+              <Ionicons name="person-circle-outline" size={32} color={COLORS.primary} />
+            </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -241,7 +322,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSub,
     marginTop: 2,
   },
-  profileButton: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12, // Jarak antar icon
+  },
+  iconButton: {
     padding: 4,
   },
 
@@ -252,7 +338,6 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: 10,
     marginBottom: 24,
-    // Shadow
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
@@ -347,7 +432,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: COLORS.border,
-    // Soft shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
@@ -445,7 +529,7 @@ const styles = StyleSheet.create({
   // Floating Action Button
   fab: {
     position: 'absolute',
-    bottom: 30, // Disesuaikan agar tidak tertutup TabBar
+    bottom: 30,
     right: 20,
     width: 56,
     height: 56,
