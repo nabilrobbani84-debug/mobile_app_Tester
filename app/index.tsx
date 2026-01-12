@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 // Pastikan path import ini benar (naik 1 level dari app/ ke src/)
 import { useAuth } from '../src/state/AuthContext';
 import SplashScreen from '../src/views/screens/splash.screen';
@@ -9,14 +9,14 @@ export default function Index() {
   const { isLoading, isAuthenticated } = useAuth();
   const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
 
-  useEffect(() => {
-    // Timer 3 detik untuk durasi splash screen
-    const timer = setTimeout(() => {
-      setSplashAnimationFinished(true);
-    }, 3000);
+  // useEffect(() => {
+  //   // Timer 3 detik untuk durasi splash screen
+  //   const timer = setTimeout(() => {
+  //     setSplashAnimationFinished(true);
+  //   }, 3000);
 
-    return () => clearTimeout(timer);
-  }, []);
+  //   return () => clearTimeout(timer);
+  // }, []);
 
   useEffect(() => {
     // Jalankan navigasi HANYA JIKA:
@@ -33,7 +33,6 @@ export default function Index() {
     }
   }, [isLoading, splashAnimationFinished, isAuthenticated, router]);
 
-  // PERBAIKAN DI SINI:
-  // Menambahkan prop 'onAnimationComplete' dengan fungsi kosong agar tidak error
-  return <SplashScreen onAnimationComplete={() => {}} />;
+  // Menambahkan prop 'onAnimationComplete' dengan fungsi update state
+  return <SplashScreen onAnimationComplete={() => setSplashAnimationFinished(true)} />;
 }
