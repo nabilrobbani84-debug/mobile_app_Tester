@@ -60,6 +60,15 @@ export class Logger {
       console.warn(`⚠️ [WARN] ${message}`, ...args);
     }
   }
+
+  /**
+   * Log success message
+   */
+  static success(message, ...args) {
+    if (currentLogLevel <= LogLevel.INFO) {
+      console.log(`✅ [SUCCESS] ${message}`, ...args);
+    }
+  }
   
   /**
    * Log error message
