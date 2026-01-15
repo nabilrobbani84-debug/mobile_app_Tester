@@ -17,6 +17,7 @@ import { Logger } from '../utils/logger.js';
  * Report Controller
  */
 export const ReportController = {
+    // Controller for handling report logic
     /**
      * Submit new report
      * @param {object} reportData - Report data

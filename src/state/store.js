@@ -3,12 +3,13 @@
  * Redux-like state management with actions and reducers
  * @module state/store
  */
+import { getJSON, setJSON } from '../utils/helpers/storageHelpers.js';
 import { Logger } from '../utils/logger.js';
 import { AuthState } from './auth.state.js';
-import { UserState } from './user.state.js';
-import { ReportState } from './report.state.js';
 import { NotificationState } from './notification.state.js';
+import { ReportState } from './report.state.js';
 import { UIState } from './ui.state.js';
+import { UserState } from './user.state.js';
 /**
  * Action Types
  */
@@ -301,9 +302,9 @@ class Store {
         Logger.info('🏪 Store reset');
     }
     /**
-     * Persist state to localStorage
+     * Persist state to storage
      */
-    persist() {
+    async persist() {
         try {
             const stateToPersist = {
                 auth: this.state.auth,
@@ -314,20 +315,20 @@ class Store {
                 }
             };
             
-            localStorage.setItem('modiva_store_state', JSON.stringify(stateToPersist));
+            await setJSON('modiva_store_state', stateToPersist);
             Logger.debug('💾 State persisted');
         } catch (error) {
             Logger.error('Failed to persist state:', error);
         }
     }
     /**
-     * Restore state from localStorage
+     * Restore state from storage
      */
-    restore() {
+    async restore() {
         try {
-            const saved = localStorage.getItem('modiva_store_state');
-            if (saved) {
-                const parsedState = JSON.parse(saved);
+            const parsedState = await getJSON('modiva_store_state');
+            if (parsedState) {
+                const prevState = this.getState();
                 
                 if (parsedState.auth) this.state.auth = parsedState.auth;
                 if (parsedState.user) this.state.user = parsedState.user;
@@ -336,7 +337,10 @@ class Store {
                     this.state.ui.language = parsedState.ui.language;
                 }
                 
-                Logger.info('📥 State restored from localStorage');
+                Logger.info('📥 State restored from storage');
+                
+                // Notify subscribers of the restoration
+                this.notifySubscribers(this.getState(), prevState, { type: 'STORE_RESTORED' });
             }
         } catch (error) {
             Logger.error('Failed to restore state:', error);

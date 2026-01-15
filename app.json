@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "testermobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -41,10 +40,6 @@
         }
       ],
       "expo-web-browser"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+    ]
   }
 }

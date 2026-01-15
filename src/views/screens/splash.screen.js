@@ -7,13 +7,13 @@ import {
     Easing,
     Image,
     Platform,
-    SafeAreaView,
     StatusBar,
     StyleSheet,
     Text,
     useWindowDimensions,
-    View,
+    View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import konfigurasi tema
 import { COLORS, FONTS } from '../../config/theme';

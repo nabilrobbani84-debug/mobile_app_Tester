@@ -1,14 +1,30 @@
 import React, { useState } from 'react';
 // Perbaikan: Hapus 'Image' dari import di bawah ini
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
+import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ReportFormScreen() {
   const router = useRouter();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Default hari ini
   const [notes, setNotes] = useState('');
+  const [image, setImage] = useState(null);
+
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
 
   const handleSubmit = () => {
     // Di sini nanti logika kirim ke API
@@ -52,12 +68,16 @@ export default function ReportFormScreen() {
         {/* Upload Foto Area (Mockup UI) */}
         <View style={styles.card}>
           <Text style={styles.label}>Bukti Minum Vitamin</Text>
-          <TouchableOpacity style={styles.uploadArea} onPress={() => alert('Fitur pilih foto akan ditambahkan nanti')}>
-            <View style={styles.uploadPlaceholder}>
-              <Ionicons name="camera-outline" size={48} color="#cbd5e1" />
-              <Text style={styles.uploadText}>Pilih Foto</Text>
-              <Text style={styles.uploadSubText}>JPG, PNG (Max 5MB)</Text>
-            </View>
+          <TouchableOpacity style={styles.uploadArea} onPress={pickImage}>
+            {image ? (
+              <Image source={{ uri: image }} style={{ width: '100%', height: 200, borderRadius: 12 }} resizeMode="cover" />
+            ) : (
+              <View style={styles.uploadPlaceholder}>
+                <Ionicons name="camera-outline" size={48} color="#cbd5e1" />
+                <Text style={styles.uploadText}>Pilih Foto</Text>
+                <Text style={styles.uploadSubText}>JPG, PNG (Max 5MB)</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
