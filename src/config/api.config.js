@@ -4,8 +4,8 @@
  * API endpoints and HTTP configuration
  * @module config/api
  */
-import { AppConfig } from './app.config.js';
 import { Logger } from '../utils/logger.js';
+import { AppConfig } from './app.config.js';
 
 // Validate AppConfig structure
 const validateAppConfig = () => {
@@ -103,14 +103,45 @@ Logger.debug('📋 API Configuration:', {
  * API Endpoints Configuration
  */
 export const ApiEndpoints = {
-  // ... (keep existing endpoints configuration)
+  auth: {
+    loginSiswa: { url: '/auth/login-siswa', method: 'POST', timeout: 10000 },
+    loginGuru: { url: '/auth/login-guru', method: 'POST', timeout: 10000 },
+    loginAdmin: { url: '/auth/login-admin', method: 'POST', timeout: 10000 },
+    logout: { url: '/auth/logout', method: 'POST', timeout: 5000 },
+    refreshToken: { url: '/auth/refresh', method: 'POST', timeout: 10000 },
+    verifyToken: { url: '/auth/verify', method: 'GET', timeout: 5000 },
+    resetPassword: { url: '/auth/password-reset', method: 'POST', timeout: 10000 },
+    changePassword: { url: '/auth/password-change', method: 'PUT', timeout: 10000 }
+  },
+  user: {
+    getProfile: { url: '/users/profile', method: 'GET', timeout: 5000 },
+    updateProfile: { url: '/users/profile', method: 'PUT', timeout: 10000 }
+  },
+  reports: {
+    submit: { url: '/reports/submit', method: 'POST', timeout: 30000 },
+    getAll: { url: '/reports', method: 'GET', timeout: 10000 },
+    getById: { url: '/reports/:id', method: 'GET', timeout: 5000 }
+  },
+  notifications: {
+    getAll: { url: '/notifications', method: 'GET', timeout: 5000 },
+    markAsRead: { url: '/notifications/:id/read', method: 'PUT', timeout: 5000 }
+  }
 };
 
 /**
  * HTTP Status Codes
  */
 export const HttpStatus = {
-  // ... (keep existing HTTP status codes)
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  INTERNAL_SERVER_ERROR: 500,
+  BAD_GATEWAY: 502,
+  SERVICE_UNAVAILABLE: 503,
+  GATEWAY_TIMEOUT: 504
 };
 
 /**
@@ -169,7 +200,13 @@ export const ApiRequestConfig = {
  * API Error Messages
  */
 export const ApiErrorMessages = {
-  // ... (keep existing error messages)
+  NETWORK_ERROR: 'Gangguan koneksi internet',
+  TIMEOUT_ERROR: 'Waktu permintaan habis',
+  SERVER_ERROR: 'Terjadi kesalahan pada server',
+  UNAUTHORIZED_ERROR: 'Sesi anda telah berakhir, silakan login kembali',
+  FORBIDDEN_ERROR: 'Anda tidak memiliki akses',
+  NOT_FOUND_ERROR: 'Data tidak ditemukan',
+  UNKNOWN_ERROR: 'Terjadi kesalahan yang tidak diketahui'
 };
 
 /**

@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useReducer, useCallback, useMemo, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
 // Imports from your storage helper utility
-import { 
-  saveAuthToken, 
-  saveUserData, 
-  clearUserSession, 
-  getAuthToken, 
-  getUserData 
+import {
+    clearUserSession,
+    getAuthToken,
+    getUserData,
+    saveAuthToken,
+    saveUserData
 } from '../utils/helpers/storageHelpers';
 
 // Initial state
@@ -70,34 +70,8 @@ const authReducer = (state, action) => {
 
 const AuthContext = createContext(null);
 
-// Mock API
-const mockLoginAPI = async ({ nisn, schoolId }) => {
-  await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-  
-  // Hardcoded validation for demo
-  if (nisn === '0110222079' && schoolId === 'SMPN1JKT') {
-    return {
-      success: true,
-      data: {
-        token: 'dummy-jwt-token-' + Date.now(),
-        user: {
-          id: 'u123',
-          name: 'Nabil Robbani',
-          role: 'student',
-          nisn: nisn,
-          schoolId: schoolId,
-          email: 'nabil@example.com',
-          avatar: 'https://i.pravatar.cc/150?u=nabil'
-        },
-      },
-    };
-  }
-  
-  return { 
-    success: false, 
-    error: 'NISN atau ID Sekolah tidak ditemukan. Coba: 0110222079 / SMPN1JKT' 
-  };
-};
+// Mock API removed in favor of services/api/auth.api.js
+import { AuthAPI } from '../services/api/auth.api';
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -129,32 +103,39 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (credentials) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     try {
-      const response = await mockLoginAPI(credentials);
+      // Use standard AuthAPI which handles Real/Mock switching based on config
+      const response = await AuthAPI.loginSiswa(credentials);
       
-      if (response.success) {
+      if (response && (response.success || response.token)) {
+        // Normalize response data
+        const token = response.token || response.data?.token;
+        const user = response.user || response.data?.user;
+        
         // Save to device storage
-        await saveAuthToken(response.data.token);
-        await saveUserData(response.data.user);
+        await saveAuthToken(token);
+        await saveUserData(user);
         
         dispatch({
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
-          payload: { token: response.data.token, user: response.data.user },
+          payload: { token, user },
         });
         return { success: true };
       } else {
+        const errorMessage = response.message || response.error || 'Login gagal';
         dispatch({ 
           type: AUTH_ACTIONS.LOGIN_FAILURE, 
-          payload: response.error 
+          payload: errorMessage
         });
-        return { success: false, error: response.error };
+        return { success: false, error: errorMessage };
       }
-    // PERBAIKAN DI SINI: Mengganti 'error' menjadi '_error'
-    } catch (_error) {
+    } catch (error) {
+      console.error("Login Error:", error);
+      const errorMessage = error.userMessage || error.message || 'Terjadi kesalahan jaringan';
       dispatch({ 
         type: AUTH_ACTIONS.LOGIN_FAILURE, 
-        payload: 'Terjadi kesalahan jaringan' 
+        payload: errorMessage 
       });
-      return { success: false, error: 'Network Error' };
+      return { success: false, error: errorMessage };
     }
   }, []);
 

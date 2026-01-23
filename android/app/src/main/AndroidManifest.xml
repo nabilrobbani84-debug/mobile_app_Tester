@@ -26,6 +26,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="testermobile"/>
+        <data android:scheme="exp+modiva"/>
       </intent-filter>
     </activity>
   </application>

@@ -4,6 +4,7 @@
  * @module controllers/notification
  */
 
+import * as Notifications from 'expo-notifications'; // IMPORT EXPO NOTIFICATIONS
 import { NotificationModel } from '../models/Notification.model.js';
 import { analyticsService, EventTypes } from '../services/analytics/analytics.service.js';
 import { NotificationAPI } from '../services/api/notification.api.js';
@@ -15,6 +16,25 @@ import { Logger } from '../utils/logger.js';
  * Notification Controller
  */
 export const NotificationController = {
+    /**
+     * Request notification permissions
+     */
+    async requestPermissions() {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+        
+        if (finalStatus !== 'granted') {
+            Logger.warn('🚫 Notification permissions not granted');
+            return false;
+        }
+        return true;
+    },
+
     /**
      * Load all notifications
      * @param {object} options - Load options
@@ -194,10 +214,10 @@ export const NotificationController = {
     },
 
     /**
-     * Add local notification
+     * Add local notification (System + App)
      * @param {object} notificationData - Notification data
      */
-    addLocalNotification(notificationData) {
+    async addLocalNotification(notificationData) {
         try {
             const notification = new NotificationModel(notificationData);
 
@@ -208,7 +228,7 @@ export const NotificationController = {
                 return;
             }
 
-            // Add to state
+            // 1. Add to App State (In-App Notification List)
             store.dispatch(ActionTypes.NOTIFICATION_ADD, notification.toJSON());
 
             // Update cache
@@ -216,7 +236,18 @@ export const NotificationController = {
             localStorageService.setNotificationsCache(state.notifications.list);
             localStorageService.setUnreadNotificationsCount(state.notifications.unreadCount);
 
-            Logger.info('✅ Local notification added');
+            // 2. Schedule System Notification (Push Notification)
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: notification.title,
+                    body: notification.message,
+                    data: { id: notification.id, type: notification.type },
+                    sound: true,
+                },
+                trigger: null, // As soon as possible
+            });
+
+            Logger.info('✅ Local notification added & scheduled');
 
         } catch (error) {
             Logger.error('❌ Failed to add local notification:', error);
@@ -245,6 +276,82 @@ export const NotificationController = {
         }
 
         return notifications.map(n => n.toJSON());
+    },
+
+    /**
+     * Check for reminders (Vitamin consumption)
+     */
+    checkReminders() {
+        const state = store.getState();
+        const user = state.user;
+        const profile = user.profile;
+        
+        if (!user || !profile) return;
+
+        // 1. Vitamin Reminder
+        const lastConsumed = user.vitaminConsumption.lastConsumed;
+        const today = new Date().toDateString();
+        const lastConsumedDate = lastConsumed ? new Date(lastConsumed).toDateString() : null;
+
+        if (lastConsumedDate !== today) {
+            // Check if we already have a reminder for today
+            const notifications = state.notifications.list;
+            const hasReminderToday = notifications.some(n => 
+                n.type === 'reminder' && 
+                new Date(n.timestamp).toDateString() === today
+            );
+
+            if (!hasReminderToday) {
+                this.addLocalNotification({
+                    type: 'reminder',
+                    title: 'Waktunya Minum Vitamin!',
+                    message: `Halo ${profile.name || 'Sobat'}, jangan lupa minum Tablet Tambah Darah hari ini ya!`,
+                    timestamp: new Date().toISOString(),
+                    read: false,
+                    icon: 'notifications', // Use valid icon name
+                    color: '#f59e0b'
+                });
+                Logger.info('⏰ Vitamin reminder added');
+                
+                // Show toast
+                store.dispatch(ActionTypes.UI_SHOW_TOAST, {
+                    type: 'info',
+                    message: 'Jangan lupa minum vitamin hari ini!'
+                });
+            }
+        }
+    },
+
+    /**
+     * Start notification scheduler
+     */
+    async startScheduler() {
+        if (this.schedulerInterval) return;
+        
+        Logger.info('⏰ Notification Scheduler Started');
+        
+        // 1. Request permissions first
+        await this.requestPermissions();
+
+        // 2. Initial check
+        this.checkReminders();
+        this.loadNotifications();
+
+        // 3. Check every minute
+        this.schedulerInterval = setInterval(() => {
+            this.checkReminders();
+        }, 60 * 1000);
+    },
+
+    /**
+     * Stop notification scheduler
+     */
+    stopScheduler() {
+        if (this.schedulerInterval) {
+            clearInterval(this.schedulerInterval);
+            this.schedulerInterval = null;
+            Logger.info('⏰ Notification Scheduler Stopped');
+        }
     }
 };
 

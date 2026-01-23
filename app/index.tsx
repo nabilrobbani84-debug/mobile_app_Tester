@@ -5,6 +5,7 @@ import { useAuth } from '../src/state/AuthContext';
 import SplashScreen from '../src/views/screens/splash.screen';
 
 export default function Index() {
+  console.log("Index Page is rendering");
   const router = useRouter();
   const { isLoading, isAuthenticated } = useAuth();
   const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);

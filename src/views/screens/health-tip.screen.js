@@ -1,9 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../../config/theme'; // Pastikan path ini sesuai
+import React from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const tipsData = [
   {
@@ -39,13 +36,7 @@ const tipsData = [
 export default function HealthTipScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1f2937" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tips Kesehatan</Text>
-      </View>
+
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.subtitle}>

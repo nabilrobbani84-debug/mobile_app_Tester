@@ -4,18 +4,17 @@
  * Request/Response interceptors for API service
  * @module services/api/interceptors
  */
+import { ApiErrorMessages, HttpStatus } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
-import { HttpStatus, ApiErrorMessages } from '../../config/api.config.js';
 
-// Storage service for tokens
+import { clearUserSession, getAuthToken, saveAuthToken } from '../../utils/helpers/storageHelpers.js';
+
+// Storage service for tokens (using AsyncStorage wrapper for Native)
 const StorageService = {
-  getToken: () => localStorage.getItem('auth_token'),
-  getRefreshToken: () => localStorage.getItem('refresh_token'),
-  setToken: (token) => localStorage.setItem('auth_token', token),
-  clearTokens: () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refresh_token');
-  }
+  getToken: async () => await getAuthToken(),
+  getRefreshToken: async () => null, // Placeholder if you implement refresh tokens
+  setToken: async (token) => await saveAuthToken(token),
+  clearTokens: async () => await clearUserSession()
 };
 
 /**
@@ -26,7 +25,7 @@ export const RequestInterceptors = {
    * Add authentication token to request
    */
   addAuthToken: async (config) => {
-    const token = StorageService.getToken();
+    const token = await StorageService.getToken();
     if (token && config.requiresAuth !== false) {
       config.headers = {
         ...config.headers,
@@ -139,7 +138,7 @@ export const ErrorInterceptors = {
       Logger.warn('Unauthorized access detected');
       
       // Clear invalid tokens
-      StorageService.clearTokens();
+      await StorageService.clearTokens();
       
       // Redirect to login page if in browser environment
       if (typeof window !== 'undefined') {

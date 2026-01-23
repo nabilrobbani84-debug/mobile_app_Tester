@@ -1,23 +1,22 @@
 // src/views/screens/reports.screen.js
-import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  RefreshControl, 
-  ActivityIndicator, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  StatusBar,
-  Alert,
-  Platform
+import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 
 // --- Library Tambahan untuk Excel ---
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import XLSX from 'xlsx';
 
@@ -114,7 +113,7 @@ const ReportsScreen = () => {
 
       // 5. Tulis file ke system
       await FileSystem.writeAsStringAsync(fileUri, wbout, {
-        encoding: FileSystem.EncodingType.Base64
+        encoding: 'base64'
       });
 
       // 6. Share / Open File Dialog

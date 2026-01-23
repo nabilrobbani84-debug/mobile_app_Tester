@@ -4,7 +4,7 @@
  * @module models/User
  */
 // Pastikan path ini benar ada di project Anda
-import { ValidationConstants, Gender, UserRoles } from '../config/constants.js'; 
+import { Gender, UserRoles, ValidationConstants } from '../config/constants.js';
 import Logger from '../utils/logger.js'; // PERBAIKAN: Default import untuk logger
 
 export class UserModel {
@@ -17,6 +17,7 @@ export class UserModel {
         this.school = data.school || null;
         this.schoolId = data.schoolId || null;
         this.address = data.address || null;
+        this.birthPlace = data.birthPlace || data.birth_place || null;
         this.birthDate = data.birthDate || data.birth_date || null;
         this.gender = data.gender || null;
         this.height = data.height ? Number(data.height) : null; // Pastikan Number
@@ -161,6 +162,7 @@ export class UserModel {
             school: this.school,
             schoolId: this.schoolId,
             address: this.address,
+            birthPlace: this.birthPlace,
             birthDate: this.birthDate,
             gender: this.gender,
             height: this.height,
@@ -185,6 +187,7 @@ export class UserModel {
             school: this.school,
             school_id: this.schoolId,
             address: this.address,
+            birth_place: this.birthPlace,
             birth_date: this.birthDate,
             gender: this.gender,
             height: this.height,
@@ -223,6 +226,7 @@ export class UserModel {
             school: data.school,
             schoolId: data.school_id,
             address: data.address,
+            birthPlace: data.birth_place,
             birthDate: data.birth_date,
             gender: data.gender,
             height: data.height,

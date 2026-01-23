@@ -3,7 +3,7 @@
  * Core storage service with encryption, compression, and expiration
  * @module services/storage/storage.service
  */
-import { StorageConfig, StorageItemConfig, StorageKeys } from '../../config/storage.config.js';
+import { StorageConfig, StorageItemConfig } from '../../config/storage.config.js';
 import { Logger } from '../../utils/logger.js';
 /**
  * Storage Item Structure
@@ -93,9 +93,25 @@ export class StorageService {
     getStorageBackend(type) {
         switch (type) {
             case 'localStorage':
-                return typeof window !== 'undefined' ? window.localStorage : null;
+                try {
+                    if (typeof window !== 'undefined' && window.localStorage) {
+                        return window.localStorage;
+                    }
+                } catch (e) {
+                    // Ignore error
+                }
+                Logger.warn('LocalStorage not available, falling back to MemoryStorage');
+                return new MemoryStorage();
             case 'sessionStorage':
-                return typeof window !== 'undefined' ? window.sessionStorage : null;
+                try {
+                    if (typeof window !== 'undefined' && window.sessionStorage) {
+                        return window.sessionStorage;
+                    }
+                } catch (e) {
+                    // Ignore error
+                }
+                Logger.warn('SessionStorage not available, falling back to MemoryStorage');
+                return new MemoryStorage();
             case 'memory':
                 return new MemoryStorage();
             default:

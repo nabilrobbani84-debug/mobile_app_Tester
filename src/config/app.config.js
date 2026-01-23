@@ -8,8 +8,10 @@
 // Environment configurations
 const environments = {
   development: {
-    apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
-    useMockApi: true,
+    // Android Emulator uses 10.0.2.2 to access host localhost.
+    // Ensure your Django backend is running on port 8000.
+    apiUrl: process.env.REACT_APP_API_URL || 'http://10.0.2.2:8000/api',
+    useMockApi: false, // Set to true to test UI without backend dependencies
     debug: true,
     logLevel: 'debug'
   },

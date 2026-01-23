@@ -1,44 +1,52 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Alert,
-  StatusBar,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
-// Mock Data Awal
-const MOCK_USER = {
-  name: 'Aisyah Putri',
-  email: 'aisyah.putri@sekolah.id',
-  school: 'SMA Negeri 1 Jakarta',
-  avatar_initial: 'A',
-  stats: {
-    height: 160,
-    weight: 50,
-    hb: 12.5,
-    consumption: '8/48'
-  }
-};
+import { useEffect } from 'react';
+import { AuthController } from '../../controllers/auth.controller';
+import { store } from '../../state/store';
 
 const ProfileScreen = () => {
   const router = useRouter();
   
-  // State untuk Data User
-  const [user, setUser] = useState(MOCK_USER);
+  // State untuk Data User - Ambil dari Global Store
+  const [user, setUser] = useState(store.getState().user.profile || {});
   
+  // Subscribe to store updates
+  useEffect(() => {
+    const unsubscribe = store.subscribe(() => {
+      const state = store.getState();
+      if (state.user && state.user.profile) {
+        setUser(state.user.profile);
+      }
+    });
+    
+    // Initial check
+    const currentUser = AuthController.getCurrentUser();
+    if (currentUser) {
+        setUser(currentUser.toJSON ? currentUser.toJSON() : currentUser);
+    }
+
+    return () => unsubscribe();
+  }, []);
+
   // State untuk Modal Edit
   const [isModalVisible, setModalVisible] = useState(false);
-  const [editData, setEditData] = useState(MOCK_USER);
+  const [editData, setEditData] = useState({});
 
   // Fungsi Membuka Modal Edit
   const handleEditPress = () => {
@@ -90,48 +98,57 @@ const ProfileScreen = () => {
 
             <View style={styles.headerContent}>
               <View style={styles.avatarContainer}>
-                <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+                <Text style={styles.avatarText}>
+                  {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                </Text>
                 <TouchableOpacity style={styles.editAvatarButton}>
                   <Ionicons name="camera" size={16} color="#3b82f6" />
                 </TouchableOpacity>
               </View>
               
-              <Text style={styles.userName}>{user.name}</Text>
-              <Text style={styles.userEmail}>{user.email}</Text>
+              <Text style={styles.userName}>{user.name || 'Pengguna'}</Text>
+              <Text style={styles.userEmail}>{user.email || '-'}</Text>
               
               <View style={styles.schoolBadge}>
                 <Ionicons name="school-outline" size={14} color="white" />
-                <Text style={styles.schoolText}>{user.school}</Text>
+                <Text style={styles.schoolText}>{user.school || 'Belum ada sekolah'}</Text>
               </View>
             </View>
           </LinearGradient>
         </View>
 
         <View style={styles.bodyContent}>
+            {/* Info Pribadi Section */}
+            <Text style={styles.sectionTitle}>Data Pribadi</Text>
+            <View style={styles.infoCard}>
+                <InfoRow label="NISN" value={user.nisn || '-'} />
+                <InfoRow label="Tempat/Tgl Lahir" value={`${user.birthPlace || '-'}, ${user.birthDate || '-'}`} />
+                <InfoRow label="Jenis Kelamin" value={user.gender === 'F' ? 'Perempuan' : user.gender === 'M' ? 'Laki-laki' : '-'} />
+            </View>
           {/* Statistik Kesehatan */}
           <Text style={styles.sectionTitle}>Statistik Kesehatan</Text>
           <View style={styles.statsGrid}>
             <StatCard 
               label="Tinggi Badan" 
-              value={`${user.stats.height} cm`} 
+              value={`${user.height || 0} cm`} 
               icon="resize-outline" 
               color="#10b981" 
             />
             <StatCard 
               label="Berat Badan" 
-              value={`${user.stats.weight} kg`} 
+              value={`${user.weight || 0} kg`} 
               icon="scale-outline" 
               color="#f59e0b" 
             />
             <StatCard 
               label="Hemoglobin" 
-              value={`${user.stats.hb} g/dL`} 
+              value={`${user.hbLast || user.hb || 0} g/dL`} 
               icon="water-outline" 
               color="#ef4444" 
             />
             <StatCard 
               label="Target TTD" 
-              value={user.stats.consumption} 
+              value={`${user.consumptionCount || 0}/${user.totalTarget || 48}`} 
               icon="medkit-outline" 
               color="#3b82f6" 
             />
@@ -192,16 +209,26 @@ const ProfileScreen = () => {
                   placeholder="Masukkan nama sekolah"
                 />
               </View>
+              
+               <View style={styles.inputGroup}>
+                <Text style={styles.label}>Tempat Lahir</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editData.birthPlace}
+                   onChangeText={(text) => setEditData({...editData, birthPlace: text})}
+                  placeholder="Tempat Lahir"
+                />
+              </View>
 
               <View style={styles.rowInputs}>
                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                   <Text style={styles.label}>Tinggi (cm)</Text>
                   <TextInput
                     style={styles.input}
-                    value={String(editData.stats.height)}
+                    value={String(editData.height || '')}
                     onChangeText={(text) => setEditData({
                       ...editData, 
-                      stats: {...editData.stats, height: text}
+                      height: text
                     })}
                     keyboardType="numeric"
                   />
@@ -210,10 +237,10 @@ const ProfileScreen = () => {
                   <Text style={styles.label}>Berat (kg)</Text>
                   <TextInput
                     style={styles.input}
-                    value={String(editData.stats.weight)}
+                    value={String(editData.weight || '')}
                     onChangeText={(text) => setEditData({
                       ...editData, 
-                      stats: {...editData.stats, weight: text}
+                      weight: text
                     })}
                     keyboardType="numeric"
                   />
@@ -244,6 +271,13 @@ const StatCard = ({ label, value, icon, color }) => (
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   </View>
+);
+
+const InfoRow = ({ label, value }) => (
+    <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={styles.infoValue}>{value}</Text>
+    </View>
 );
 
 const MenuItem = ({ icon, label, onPress, isDestructive }) => (
@@ -502,6 +536,33 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Info Card Styles
+  infoCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  infoLabel: {
+    color: '#6b7280',
+    fontSize: 14,
+  },
+  infoValue: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
