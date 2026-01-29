@@ -1,36 +1,69 @@
-import React from 'react';
-import { router } from 'expo-router';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient'; 
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// PERBAIKAN: Import dari lokasi yang benar (src/config/theme.js)
-import { COLORS, SIZES, FONTS } from '../../config/theme';
-
-// Data Mockup (Diambil dari assets/js/api.js)
-const userData = {
-  name: 'Aisyah',
-  consumption_count: 8,
-  total_target: 48,
-  hb_last: 12.5
-};
+import { COLORS } from '../../config/theme';
+import { AuthController } from '../../controllers/auth.controller';
+import { store } from '../../state/store';
 
 export default function HomeScreen() {
-  const percentage = Math.round((userData.consumption_count / userData.total_target) * 100);
+  // State for User Data & Reports
+  const [user, setUser] = useState(store.getState().user.profile || {});
+  // Ambil 5 report terakhir untuk di home
+  const [reports, setReports] = useState(store.getState().reports.list.slice(0, 5) || []);
+
+  // Refresh data when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      const updateState = () => {
+          const state = store.getState();
+          if (state.user && state.user.profile) {
+             setUser(state.user.profile);
+          }
+          if (state.reports && state.reports.list) {
+             // Urutkan terbaru -> terlama, ambil 5
+             const sortedReports = [...state.reports.list].sort((a,b) => b.timestamp - a.timestamp);
+             setReports(sortedReports.slice(0, 5));
+          }
+      };
+
+      // 1. Initial Get
+      updateState();
+
+      // 2. Fallback check (Controller)
+      const currentUser = AuthController.getCurrentUser();
+      if (!store.getState().user.profile && currentUser) {
+          setUser(currentUser.toJSON ? currentUser.toJSON() : currentUser);
+      }
+
+      // 3. Subscribe
+      const unsubscribe = store.subscribe(() => {
+        updateState();
+      });
+
+      return () => unsubscribe();
+    }, [])
+  );
+
+  // Helper values with defaults from user profile
+  const consumptionCount = user.consumptionCount || 0;
+  const totalTarget = user.totalTarget || 48; // Default to 48 if not set
+  const hbValue = user.hbLast || user.hb || 0; // Support both naming conventions
+  
+  const percentage = totalTarget > 0 ? Math.round((consumptionCount / totalTarget) * 100) : 0;
 
   return (
-    // Gunakan COLORS.background dari theme jika diinginkan, atau tetap hardcode
     <View style={styles.container}>
-      {/* Header dengan Gradient */}
+      {/* Header with Gradient */}
       <LinearGradient
-        // Anda bisa mengganti hex code ini dengan variabel dari COLORS jika mau
-        // Contoh: colors={[COLORS.gradientStart, COLORS.gradientEnd]}
         colors={['#3b82f6', '#1d4ed8']} 
         style={styles.header}
       >
         <SafeAreaView>
           <View style={styles.headerContent}>
-            <Text style={styles.greeting}>Hai, {userData.name} 👋</Text>
+            <Text style={styles.greeting}>Hai, {user.name || 'Pengguna'} 👋</Text>
             <Text style={styles.subGreeting}>Jangan lupa minum vitamin hari ini!</Text>
           </View>
         </SafeAreaView>
@@ -38,18 +71,17 @@ export default function HomeScreen() {
 
       <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 100 }}>
         
-        {/* Card Informasi Vitamin */}
+        {/* Vitamin Info Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Informasi Vitamin</Text>
-            {/* Menggunakan COLORS.info atau primary */}
             <Ionicons name="medkit" size={24} color={COLORS.info || "#3b82f6"} />
           </View>
           
           <View style={styles.statRow}>
-            <Text style={styles.bigStat}>{userData.consumption_count}</Text>
+            <Text style={styles.bigStat}>{consumptionCount}</Text>
             <Text style={styles.statDivider}>/</Text>
-            <Text style={styles.totalStat}>{userData.total_target}</Text>
+            <Text style={styles.totalStat}>{totalTarget}</Text>
           </View>
           <Text style={styles.statLabel}>Jumlah vitamin diminum</Text>
           
@@ -59,7 +91,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Tombol Lapor Cepat */}
+        {/* Quick Report Button */}
         <TouchableOpacity 
             style={styles.reportButton} 
             onPress={() => router.push('/report-form')}
@@ -68,17 +100,17 @@ export default function HomeScreen() {
           <Text style={styles.reportButtonText}>Isi Laporan Konsumsi</Text>
         </TouchableOpacity>
 
-        {/* Card Tren Hemoglobin */}
+        {/* Hemoglobin Trend Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Tren Hemoglobin</Text>
-            <Text style={styles.weekLabel}>Minggu ini</Text>
+            <Text style={styles.weekLabel}>Terakhir Diperbarui</Text>
           </View>
           <View style={styles.hbRow}>
-            <Text style={styles.hbValue}>{userData.hb_last}</Text>
+            <Text style={styles.hbValue}>{hbValue}</Text>
             <Text style={styles.hbUnit}>g/dL</Text>
           </View>
-          {/* Placeholder untuk Chart */}
+          {/* Chart Placeholder */}
           <View style={styles.chartPlaceholder}>
             <View style={{height: 100, width: '100%', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between'}}>
                 {[40, 50, 60, 55, 70, 80, 80].map((h, i) => (
@@ -89,7 +121,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Card Tips Kesehatan */}
+        {/* Health Tips Card */}
         <LinearGradient
           colors={['#10b981', '#059669']} 
           style={[styles.card, styles.tipsCard]}
@@ -106,25 +138,35 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </LinearGradient>
 
-        {/* Riwayat Terbaru */}
+        {/* Recent History */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Riwayat Konsumsi Terbaru</Text>
           
-          {[
-            { date: '12 Mei 2024', hb: '12.5', status: 'Selesai' },
-            { date: '11 Mei 2024', hb: '12.3', status: 'Selesai' },
-            { date: '10 Mei 2024', hb: '12.1', status: 'Selesai' },
-          ].map((item, index) => (
-            <View key={index} style={styles.historyItem}>
-              <View>
-                <Text style={styles.historyDate}>{item.date}</Text>
-                <Text style={styles.historyHb}>Nilai HB: {item.hb} g/dL</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.status}</Text>
-              </View>
-            </View>
-          ))}
+          {reports.length === 0 ? (
+             <Text style={{color: '#9ca3af', fontStyle: 'italic', marginTop: 10}}>Belum ada riwayat.</Text>
+          ) : (
+              reports.map((item, index) => (
+                <View key={item.id || index} style={styles.historyItem}>
+                  <View>
+                    <Text style={styles.historyDate}>
+                        {/* Format Tanggal: YYYY-MM-DD -> DD Month YYYY */}
+                        {new Date(item.date || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </Text>
+                    {/* Jika ada nilai HB di report, tampilkan. Jika tidak, hide atau tampilkan default */}
+                    {item.hb ? (
+                        <Text style={styles.historyHb}>Nilai HB: {item.hb} g/dL</Text>
+                    ) : (
+                        <Text style={styles.historyHb}>Konsumsi Vitamin</Text>
+                    )}
+                  </View>
+                  <View style={[styles.badge, { backgroundColor: item.status === 'Selesai' ? '#dcfce7' : '#fef9c3' }]}>
+                    <Text style={[styles.badgeText, { color: item.status === 'Selesai' ? '#16a34a' : '#854d0e' }]}>
+                        {item.status || 'Selesai'}
+                    </Text>
+                  </View>
+                </View>
+              ))
+          )}
         </View>
 
       </ScrollView>

@@ -3,9 +3,9 @@
  * API calls for notification management
  * @module services/api/notification.api
  */
-import { apiService } from './api.services.js';
-import { ApiEndpoints, USE_MOCK_API, MOCK_API_DELAY } from '../../config/api.config.js';
+import { ApiEndpoints, USE_MOCK_API } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
+import { apiService } from './api.services.js';
 /**
  * Mock Notification API
  */
@@ -75,15 +75,31 @@ const MockNotificationAPI = {
     /**
      * Mock mark as read
      */
+    /**
+     * Mock mark as read
+     */
     async markAsRead(id) {
         await new Promise(resolve => setTimeout(resolve, 200));
-        
         Logger.info('🎭 Mock API: Mark Notification as Read', { id });
-        
-        return {
-            success: true,
-            message: 'Notification marked as read'
-        };
+        return { success: true, message: 'Notification marked as read' };
+    },
+
+    /**
+     * Mock mark all as read
+     */
+    async markAllAsRead() {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        Logger.info('🎭 Mock API: Mark All as Read');
+        return { success: true, message: 'All notifications marked as read' };
+    },
+
+    /**
+     * Mock delete notification
+     */
+    async deleteNotification(id) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        Logger.info('🎭 Mock API: Delete Notification', { id });
+        return { success: true, message: 'Notification deleted' };
     }
 };
 /**
@@ -118,6 +134,45 @@ export const NotificationAPI = {
         
         const endpoint = ApiEndpoints.notifications.markAsRead;
         return await apiService.put(endpoint.url, {}, {
+            params: { id },
+            timeout: endpoint.timeout
+        });
+    },
+
+    /**
+     * Mark all notifications as read
+     * @returns {Promise<object>}
+     */
+    async markAllAsRead() {
+        if (USE_MOCK_API) {
+            return await MockNotificationAPI.markAllAsRead();
+        }
+
+        // Check if endpoint exists, if not use a generic one or multiple calls
+        const endpoint = ApiEndpoints.notifications.markAllRead || { url: '/notifications/read-all', timeout: 5000 };
+        return await apiService.put(endpoint.url, {}, {
+            timeout: endpoint.timeout
+        });
+    },
+
+    /**
+     * Delete notification
+     * @param {string|number} id - Notification ID
+     * @returns {Promise<object>}
+     */
+    async deleteNotification(id) {
+        if (USE_MOCK_API) {
+            return await MockNotificationAPI.deleteNotification(id);
+        }
+
+        const endpoint = ApiEndpoints.notifications.delete || { url: '/notifications/:id', timeout: 5000 };
+        // Replace :id if needed or use params
+        let url = endpoint.url;
+        if (url.includes(':id')) {
+            url = url.replace(':id', id);
+        }
+
+        return await apiService.delete(url, {
             params: { id },
             timeout: endpoint.timeout
         });

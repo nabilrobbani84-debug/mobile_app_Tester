@@ -4,12 +4,12 @@
  * @module services/analytics/analytics.service
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Application from 'expo-application';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { AppConfig } from '../../config/app.config';
 import { Logger } from '../../utils/logger';
-import * as Application from 'expo-application'; 
-import * as Device from 'expo-device'; 
 
 /**
  * Event Types
@@ -22,7 +22,10 @@ export const EventTypes = {
     FORM_SUBMIT: 'form_submit',
     ERROR_OCCURRED: 'error_occurred',
     PROFILE_EDIT: 'profile_edit',
-    CUSTOM_EVENT: 'custom_event'
+    CUSTOM_EVENT: 'custom_event',
+    NOTIFICATION_CLICK: 'notification_click',
+    NOTIFICATION_DISMISS: 'notification_dismiss',
+    NOTIFICATION_RECEIVED: 'notification_received'
 };
 
 /**
@@ -151,6 +154,10 @@ export class AnalyticsService {
 
     trackScreenView(screenName, params = {}) {
         this.trackEvent(EventTypes.SCREEN_VIEW, { screen: screenName, ...params });
+    }
+
+    trackPageView(pageName, params = {}) {
+        this.trackScreenView(pageName, params);
     }
 
     trackError(error, context = {}) {

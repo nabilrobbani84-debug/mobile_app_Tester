@@ -123,11 +123,15 @@ const ReportsScreen = () => {
         return;
       }
 
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        dialogTitle: 'Download Laporan Excel',
-        UTI: 'com.microsoft.excel.xlsx' // Spesifik untuk iOS
-      });
+      try {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          dialogTitle: 'Download Laporan Excel',
+          UTI: 'com.microsoft.excel.xlsx' // Spesifik untuk iOS
+        });
+      } catch (shareError) {
+        console.warn("Share was dismissed or failed:", shareError);
+      }
 
     } catch (error) {
       console.error("Download error:", error);

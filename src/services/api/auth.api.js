@@ -41,7 +41,9 @@ const MockAuthAPI = {
             { id: 17, nis: '10017', nama: 'Toni Permata', tmp_lahir: 'Jakarta', email: 'toni.permata@gmail.com', gender: 'L', tgl_lahir: '2010-05-02', sekolah_id: '9' },
             { id: 18, nis: '10018', nama: 'Kartika Lestari', tmp_lahir: 'Depok', email: 'kartika.lestari@yahoo.com', gender: 'L', tgl_lahir: '2005-12-17', sekolah_id: '9' },
             { id: 19, nis: '10019', nama: 'Citra Lestari', tmp_lahir: 'Bekasi', email: 'citra.lestari@yahoo.com', gender: 'P', tgl_lahir: '2007-02-14', sekolah_id: '9' },
-            { id: 20, nis: '10020', nama: 'Dewi Wijaya', tmp_lahir: 'Bandung', email: 'dewi.wijaya@gmail.com', gender: 'L', tgl_lahir: '2006-05-12', sekolah_id: '9' }
+            { id: 20, nis: '10020', nama: 'Dewi Wijaya', tmp_lahir: 'Bandung', email: 'dewi.wijaya@gmail.com', gender: 'L', tgl_lahir: '2006-05-12', sekolah_id: '9' },
+            // User Sesuai Hint di Login Screen
+            { id: 99, nis: '0110222079', nama: 'Rizky Pratama', tmp_lahir: 'Jakarta', email: 'rizky.pratama@modiva.id', gender: 'L', tgl_lahir: '2008-08-17', sekolah_id: 'SMPN1JKT' }
         ];
 
         // Find user by NIS and School ID
@@ -62,20 +64,20 @@ const MockAuthAPI = {
                     school: `Sekolah ID ${matchedUser.sekolah_id}`, // Generic school name
                     schoolId: matchedUser.sekolah_id,
                     role: 'siswa',
-                    hb_last: 12.5, // Default mockup data
-                    consumption_count: 8,
-                    total_target: 48,
+                    hbLast: 12.5, // Default mockup data
+                    consumptionCount: 8,
+                    totalTarget: 48,
                     email: matchedUser.email,
                     phone: '081234567890', // Default
                     address: 'Alamat Siswa', // Default
-                    birth_place: matchedUser.tmp_lahir,
-                    birth_date: matchedUser.tgl_lahir,
+                    birthPlace: matchedUser.tmp_lahir,
+                    birthDate: matchedUser.tgl_lahir,
                     gender: matchedUser.gender === 'P' ? 'F' : 'M', // Map L/P to M/F
                     height: 160,
                     weight: 50,
                     avatar: null,
-                    created_at: '2025-08-11T03:12:35.000000', // From screenshot
-                    updated_at: new Date().toISOString()
+                    createdAt: '2025-08-11T03:12:35.000000', // From screenshot
+                    updatedAt: new Date().toISOString()
                 }
             };
         }

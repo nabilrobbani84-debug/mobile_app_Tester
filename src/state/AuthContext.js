@@ -71,7 +71,9 @@ const authReducer = (state, action) => {
 const AuthContext = createContext(null);
 
 // Mock API removed in favor of services/api/auth.api.js
+import { UserModel } from '../models/User.model';
 import { AuthAPI } from '../services/api/auth.api';
+import { ActionTypes, store } from './store';
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -84,10 +86,17 @@ export const AuthProvider = ({ children }) => {
         const storedUser = await getUserData();
 
         if (storedToken && storedUser) {
+          // Normalize stored user data as well to be safe
+          const userStart = new UserModel(storedUser).toJSON();
+          
           dispatch({
             type: AUTH_ACTIONS.RESTORE_SESSION,
-            payload: { token: storedToken, user: storedUser },
+            payload: { token: storedToken, user: userStart },
           });
+
+          // Sync with Global Store
+          store.dispatch(ActionTypes.AUTH_LOGIN, { token: storedToken });
+          store.dispatch(ActionTypes.USER_SET_PROFILE, userStart);
         } else {
           dispatch({ type: AUTH_ACTIONS.STOP_LOADING });
         }
@@ -109,8 +118,11 @@ export const AuthProvider = ({ children }) => {
       if (response && (response.success || response.token)) {
         // Normalize response data
         const token = response.token || response.data?.token;
-        const user = response.user || response.data?.user;
+        const rawUser = response.user || response.data?.user;
         
+        // Use UserModel to normalize data (handle snake_case or camelCase)
+        const user = new UserModel(rawUser).toJSON();
+
         // Save to device storage
         await saveAuthToken(token);
         await saveUserData(user);
@@ -119,6 +131,11 @@ export const AuthProvider = ({ children }) => {
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
           payload: { token, user },
         });
+
+        // Sync with Global Store
+        store.dispatch(ActionTypes.AUTH_LOGIN, { token });
+        store.dispatch(ActionTypes.USER_SET_PROFILE, user);
+
         return { success: true };
       } else {
         const errorMessage = response.message || response.error || 'Login gagal';

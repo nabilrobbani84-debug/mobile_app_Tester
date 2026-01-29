@@ -104,7 +104,7 @@ Logger.debug('📋 API Configuration:', {
  */
 export const ApiEndpoints = {
   auth: {
-    loginSiswa: { url: '/auth/login-siswa', method: 'POST', timeout: 10000 },
+    loginSiswa: { url: '/auth/login-siswa', method: 'POST', timeout: 15000 },
     loginGuru: { url: '/auth/login-guru', method: 'POST', timeout: 10000 },
     loginAdmin: { url: '/auth/login-admin', method: 'POST', timeout: 10000 },
     logout: { url: '/auth/logout', method: 'POST', timeout: 5000 },

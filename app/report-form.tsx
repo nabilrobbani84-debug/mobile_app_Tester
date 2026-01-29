@@ -10,7 +10,7 @@ export default function ReportFormScreen() {
   const router = useRouter();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Default hari ini
   const [notes, setNotes] = useState('');
-  const [image, setImage] = useState(null);
+  const [image, setImage] = useState<string | null>(null);
 
   const pickImage = async () => {
     // No permissions request is necessary for launching the image library
@@ -27,7 +27,38 @@ export default function ReportFormScreen() {
   };
 
   const handleSubmit = () => {
-    // Di sini nanti logika kirim ke API
+    if (!date) {
+        alert('Tanggal tidak boleh kosong');
+        return;
+    }
+
+    if (!image) {
+        alert('Mohon lampirkan bukti foto minum vitamin');
+        return;
+    }
+
+    // Buat object laporan baru
+    const newReport = {
+        id: Date.now().toString(),
+        date: date,
+        notes: notes,
+        image: image,
+        status: 'Selesai', // Atau 'Pending' jika butuh approval
+        hb: 0, // Default atau ambil dari user profile nanti
+        timestamp: Date.now()
+    };
+
+    // Dispatch Action ke Store
+    // 1. Tambah Report
+    // Kita harus mengakses store langsung karena ini file di luar 'src' (app folder)
+    // Pastikan import path benar
+    const { store, ActionTypes } = require('../src/state/store'); 
+
+    store.dispatch(ActionTypes.REPORT_ADD, newReport);
+
+    // 2. Update Progress Konsumsi User (Opsional, tapi diminta UI update)
+    store.dispatch(ActionTypes.USER_INCREMENT_CONSUMPTION);
+
     alert('Laporan berhasil dikirim!');
     router.back(); // Kembali ke home setelah submit
   };

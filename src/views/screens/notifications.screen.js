@@ -1,17 +1,23 @@
-import React, { useState } from 'react';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SectionList,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Image,
-  Dimensions
+    Alert,
+    Dimensions,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    SectionList,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+
+// Imports for Logic
+import { NotificationController } from '../../controllers/notification.controller';
+import { store } from '../../state/store';
 
 // --- Theme & Colors (Modern Palette) ---
 const COLORS = {
@@ -31,69 +37,70 @@ const COLORS = {
 
 const { width } = Dimensions.get('window');
 
-// --- Mock Data (Grouped by Date) ---
-const NOTIFICATIONS_DATA = [
-  {
-    title: 'Hari Ini',
-    data: [
-      {
-        id: '1',
-        title: 'Waktunya Minum Vitamin!',
-        subtitle: 'Jangan lupa konsumsi Tablet Tambah Darah hari ini.',
-        time: '10:00',
-        type: 'reminder',
-        read: false,
-      },
-      {
-        id: '2',
-        title: 'Semangat Pagi!',
-        subtitle: 'Kesehatan adalah investasi terbaikmu. Tetap semangat!',
-        time: '08:00',
-        type: 'message',
-        read: false,
-      },
-    ],
-  },
-  {
-    title: 'Kemarin',
-    data: [
-      {
-        id: '3',
-        title: 'Laporan Mingguan Tersedia',
-        subtitle: 'Cek rangkuman kesehatanmu minggu ini.',
-        time: '14:30',
-        type: 'info',
-        read: true,
-      },
-    ],
-  },
-  {
-    title: 'Minggu Lalu',
-    data: [
-      {
-        id: '4',
-        title: 'Pengingat Kontrol',
-        subtitle: 'Jadwal kontrol kesehatan puskesmas.',
-        time: 'Senin',
-        type: 'reminder',
-        read: true,
-      },
-      {
-        id: '5',
-        title: 'Tips Kesehatan Baru',
-        subtitle: 'Makanan kaya zat besi yang wajib kamu tahu.',
-        time: 'Minggu',
-        type: 'message',
-        read: true,
-      },
-    ],
-  },
-];
+// --- Helper Functions ---
+
+const groupNotificationsByDate = (notifications) => {
+  if (!notifications || !Array.isArray(notifications)) return [];
+
+  const sections = [];
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const groups = {
+    today: [],
+    yesterday: [],
+    older: []
+  };
+
+  // Helper to strip time component for comparison
+  const isSameDay = (d1, d2) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
+  notifications.forEach(item => {
+    // Ensure item has a timestamp, fallback to Date.now() if missing
+    const itemDate = item.timestamp ? new Date(item.timestamp) : new Date();
+    
+    if (isSameDay(itemDate, today)) {
+      groups.today.push(item);
+    } else if (isSameDay(itemDate, yesterday)) {
+      groups.yesterday.push(item);
+    } else {
+      groups.older.push(item);
+    }
+  });
+
+  if (groups.today.length > 0) {
+    sections.push({ title: 'Hari Ini', data: groups.today.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)) });
+  }
+  if (groups.yesterday.length > 0) {
+    sections.push({ title: 'Kemarin', data: groups.yesterday.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)) });
+  }
+  if (groups.older.length > 0) {
+    sections.push({ title: 'Sebelumnya', data: groups.older.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)) });
+  }
+
+  return sections;
+};
+
+const formatTime = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+};
 
 // --- Components ---
 
 const Header = () => {
   const router = useRouter();
+  
+  const handleMarkAllRead = () => {
+      NotificationController.markAllAsRead();
+  };
+
   return (
     <View style={styles.headerContainer}>
       <TouchableOpacity 
@@ -106,20 +113,20 @@ const Header = () => {
       
       <Text style={styles.headerTitle}>Notifikasi</Text>
       
-      {/* Tombol aksi kanan (misal: Mark all read) */}
-      <TouchableOpacity activeOpacity={0.7}>
+      {/* Tombol aksi kanan (Mark all read) */}
+      <TouchableOpacity activeOpacity={0.7} onPress={handleMarkAllRead}>
         <Ionicons name="checkmark-done-circle-outline" size={26} color={COLORS.accent} />
       </TouchableOpacity>
     </View>
   );
 };
 
-const NotificationItem = ({ item }) => {
+const NotificationItem = ({ item, onDelete, onPress }) => {
   // Menentukan warna & icon berdasarkan tipe
   const getStyleByType = () => {
     switch (item.type) {
       case 'reminder':
-        return { bg: COLORS.iconBgReminder, color: COLORS.iconColorReminder, icon: 'alarm-outline' }; // Ionicons
+        return { bg: COLORS.iconBgReminder, color: COLORS.iconColorReminder, icon: 'alarm-outline' }; 
       case 'message':
         return { bg: COLORS.iconBgMessage, color: COLORS.iconColorMessage, icon: 'chatbubble-ellipses-outline' };
       default:
@@ -130,32 +137,47 @@ const NotificationItem = ({ item }) => {
   const styleConfig = getStyleByType();
 
   return (
-    <TouchableOpacity style={[styles.card, !item.read && styles.unreadCard]} activeOpacity={0.9}>
-      <View style={styles.cardContent}>
-        
-        {/* Icon Box */}
-        <View style={[styles.iconBox, { backgroundColor: styleConfig.bg }]}>
-          <Ionicons name={styleConfig.icon} size={22} color={styleConfig.color} />
-        </View>
+    <View style={styles.cardWrapper}>
+        <TouchableOpacity 
+            style={[styles.card, !item.read && styles.unreadCard]} 
+            activeOpacity={0.9}
+            onPress={() => onPress(item)}
+        >
+        <View style={styles.cardContent}>
+            
+            {/* Icon Box */}
+            <View style={[styles.iconBox, { backgroundColor: styleConfig.bg }]}>
+            <Ionicons name={styleConfig.icon} size={22} color={styleConfig.color} />
+            </View>
 
-        {/* Text Content */}
-        <View style={styles.textContainer}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.itemTitle, !item.read && styles.unreadTitle]} numberOfLines={1}>
-              {item.title}
+            {/* Text Content */}
+            <View style={styles.textContainer}>
+            <View style={styles.titleRow}>
+                <Text style={[styles.itemTitle, !item.read && styles.unreadTitle]} numberOfLines={1}>
+                {item.title}
+                </Text>
+                <Text style={styles.itemTime}>{formatTime(item.timestamp)}</Text>
+            </View>
+            
+            <Text style={styles.itemSubtitle} numberOfLines={2}>
+                {item.message || item.subtitle}
             </Text>
-            <Text style={styles.itemTime}>{item.time}</Text>
-          </View>
-          
-          <Text style={styles.itemSubtitle} numberOfLines={2}>
-            {item.subtitle}
-          </Text>
+            </View>
         </View>
-      </View>
 
-      {/* Unread Indicator Dot */}
-      {!item.read && <View style={styles.unreadDot} />}
-    </TouchableOpacity>
+        {/* Unread Indicator Dot */}
+        {!item.read && <View style={styles.unreadDot} />}
+        </TouchableOpacity>
+
+        {/* Delete Button (Overlay or Side) - Simple implementation as a side action */}
+        <TouchableOpacity 
+            style={styles.deleteButton} 
+            onPress={() => onDelete(item.id)}
+            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+        >
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+        </TouchableOpacity>
+    </View>
   );
 };
 
@@ -171,30 +193,134 @@ const EmptyState = () => (
       <Feather name="bell-off" size={40} color="#9CA3AF" />
     </View>
     <Text style={styles.emptyTitle}>Belum ada notifikasi</Text>
-    <Text style={styles.emptySubtitle}>Kami akan memberi tahu Anda jika ada update terbaru.</Text>
+    <Text style={styles.emptySubtitle}>Kami akan memberi tahu Anda jika ada update terbaru hari ini.</Text>
   </View>
 );
 
 // --- Main Screen ---
 
 const NotificationScreen = () => {
+  const [sections, setSections] = useState([]);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Initial Load & Subscribe
+  useFocusEffect(
+    useCallback(() => {
+      // 1. Trigger Check for Today's Reminders
+      NotificationController.checkReminders();
+      
+      // 2. Load Notifications
+      NotificationController.loadNotifications();
+
+      // 3. Update State from Store
+      const updateState = () => {
+          const state = store.getState();
+          const list = state.notifications.list || [];
+          setSections(groupNotificationsByDate(list));
+      };
+
+      updateState(); // Initial call
+
+      // 4. Subscribe to future updates
+      const unsubscribe = store.subscribe(() => {
+          updateState();
+      });
+
+      return () => unsubscribe();
+    }, [])
+  );
+
+  const handleDeleteNotification = (id) => {
+      Alert.alert(
+          "Hapus Notifikasi",
+          "Apakah Anda yakin ingin menghapus notifikasi ini?",
+          [
+              { text: "Batal", style: "cancel" },
+              { 
+                  text: "Hapus", 
+                  style: "destructive", 
+                  onPress: () => NotificationController.deleteNotification(id)
+              }
+          ]
+      );
+  };
+
+  const handleNotificationPress = (item) => {
+      if (!item.read) {
+          NotificationController.markAsRead(item.id);
+      }
+      setSelectedNotification(item);
+      setModalVisible(true);
+  };
+
+  const closeModal = () => {
+      setModalVisible(false);
+      setSelectedNotification(null);
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <Header />
       
       <SectionList
-        sections={NOTIFICATIONS_DATA}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <NotificationItem item={item} />}
+        sections={sections}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+            <NotificationItem 
+                item={item} 
+                onDelete={handleDeleteNotification}
+                onPress={handleNotificationPress}
+            />
+        )}
         renderSectionHeader={({ section: { title } }) => <SectionHeader title={title} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        stickySectionHeadersEnabled={false} // Set true jika ingin header tanggal menempel di atas
+        stickySectionHeadersEnabled={false}
         ListEmptyComponent={EmptyState}
-        // Spacer bawah agar tidak tertutup nav bar jika ada
         ListFooterComponent={<View style={{ height: 40 }} />} 
       />
+
+    {/* Detail Modal */}
+    <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeModal}
+    >
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Detail Notifikasi</Text>
+                    <TouchableOpacity onPress={closeModal}>
+                        <Ionicons name="close" size={24} color="#374151" />
+                    </TouchableOpacity>
+                </View>
+                
+                {selectedNotification && (
+                    <ScrollView contentContainerStyle={styles.modalBody}>
+                        <View style={styles.modalIconContainer}>
+                             <Ionicons 
+                                name={selectedNotification.type === 'reminder' ? 'alarm-outline' : 'chatbubble-ellipses-outline'} 
+                                size={40} 
+                                color={selectedNotification.type === 'reminder' ? COLORS.iconColorReminder : COLORS.iconColorMessage} 
+                            />
+                        </View>
+                        <Text style={styles.modalItemTitle}>{selectedNotification.title}</Text>
+                        <Text style={styles.modalItemTime}>{formatTime(selectedNotification.timestamp)}</Text>
+                        <View style={styles.divider} />
+                        <Text style={styles.modalItemMessage}>{selectedNotification.message || selectedNotification.subtitle}</Text>
+                        
+                        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                            <Text style={styles.closeButtonText}>Tutup</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                )}
+            </View>
+        </View>
+    </Modal>
+
     </SafeAreaView>
   );
 };
@@ -219,9 +345,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: COLORS.background,
-    // Opsional: Shadow tipis di header
-    // borderBottomWidth: 1,
-    // borderBottomColor: '#F0F0F0',
   },
   backButton: {
     padding: 8,
@@ -230,7 +353,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '800', // Lebih tebal
+    fontWeight: '800',
     color: COLORS.textPrimary,
     letterSpacing: 0.5,
   },
@@ -239,7 +362,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingVertical: 12,
     marginTop: 8,
-    backgroundColor: COLORS.background, // Match container bg
+    backgroundColor: COLORS.background,
   },
   sectionHeaderText: {
     fontSize: 14,
@@ -250,30 +373,34 @@ const styles = StyleSheet.create({
   },
 
   // Card Styles
-  card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 20, // Sudut lebih bulat
-    padding: 16,
-    marginBottom: 12,
+  cardWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    // Modern Shadow
+    marginBottom: 12,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 20, 
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 3, // Android shadow
+    elevation: 3,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   unreadCard: {
     borderColor: COLORS.accentLight,
-    backgroundColor: '#FAFCFF', // Sedikit tint biru untuk unread
+    backgroundColor: '#FAFCFF', 
   },
   cardContent: {
     flexDirection: 'row',
     flex: 1,
-    alignItems: 'flex-start', // Align items to top
+    alignItems: 'flex-start',
   },
   
   // Icon Styles
@@ -290,7 +417,7 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     justifyContent: 'center',
-    paddingVertical: 2, // Minor adjustment
+    paddingVertical: 2,
   },
   titleRow: {
     flexDirection: 'row',
@@ -306,7 +433,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   unreadTitle: {
-    fontWeight: '800', // Lebih tebal jika unread
+    fontWeight: '800',
     color: '#111827',
   },
   itemTime: {
@@ -317,7 +444,7 @@ const styles = StyleSheet.create({
   itemSubtitle: {
     fontSize: 13,
     color: COLORS.textSecondary,
-    lineHeight: 18, // Jarak antar baris lebih enak dibaca
+    lineHeight: 18,
   },
 
   // Indicators
@@ -329,6 +456,18 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: COLORS.danger,
+  },
+  
+  // Delete Button
+  deleteButton: {
+      padding: 10,
+      marginLeft: 8,
+      backgroundColor: '#FEF2F2',
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: 48, // approximate height of card center
+      width: 48,
   },
 
   // Empty State Styles
@@ -359,6 +498,83 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: '70%',
   },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: '40%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  modalBody: {
+      alignItems: 'center',
+      paddingBottom: 20,
+  },
+  modalIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: COLORS.iconBgMessage,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+  },
+  modalItemTitle: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: COLORS.textPrimary,
+      textAlign: 'center',
+      marginBottom: 8,
+  },
+  modalItemTime: {
+      fontSize: 14,
+      color: COLORS.textSecondary,
+      marginBottom: 16,
+  },
+  divider: {
+      height: 1,
+      width: '100%',
+      backgroundColor: '#E5E7EB',
+      marginBottom: 16,
+  },
+  modalItemMessage: {
+      fontSize: 16,
+      color: '#374151',
+      lineHeight: 24,
+      textAlign: 'center',
+      marginBottom: 32,
+  },
+  closeButton: {
+      backgroundColor: COLORS.accent,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      borderRadius: 16,
+      width: '100%',
+      alignItems: 'center',
+  },
+  closeButtonText: {
+      color: 'white',
+      fontWeight: 'bold',
+      fontSize: 16,
+  }
 });
 
 export default NotificationScreen;

@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker'; // Added ImagePicker
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
+    Image, // Added Image
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -16,33 +18,54 @@ import {
     View
 } from 'react-native';
 
-import { useEffect } from 'react';
-import { AuthController } from '../../controllers/auth.controller';
-import { store } from '../../state/store';
+import { ActionTypes, store } from '../../state/store'; // Ensure ActionTypes is imported
 
 const ProfileScreen = () => {
   const router = useRouter();
   
   // State untuk Data User - Ambil dari Global Store
   const [user, setUser] = useState(store.getState().user.profile || {});
-  
-  // Subscribe to store updates
-  useEffect(() => {
-    const unsubscribe = store.subscribe(() => {
-      const state = store.getState();
-      if (state.user && state.user.profile) {
-        setUser(state.user.profile);
-      }
-    });
-    
-    // Initial check
-    const currentUser = AuthController.getCurrentUser();
-    if (currentUser) {
-        setUser(currentUser.toJSON ? currentUser.toJSON() : currentUser);
-    }
 
-    return () => unsubscribe();
-  }, []);
+  // ... (existing code for useFocusEffect) ...
+
+  const handlePickAvatar = async () => {
+    try {
+      // 1. Request Permission
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert("Izin Ditolak", "Anda perlu mengizinkan akses galeri untuk mengganti foto profil.");
+        return;
+      }
+
+      // 2. Launch Image Picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        const newAvatarUri = result.assets[0].uri;
+        
+        // 3. Update Local User State
+        const updatedUser = { ...user, avatar: newAvatarUri };
+        setUser(updatedUser);
+
+        // 4. Update Global Store & Persist
+        store.dispatch(ActionTypes.USER_UPDATE_PROFILE, { avatar: newAvatarUri });
+        
+        // 5. Save to Storage via Controller (Optional explicit save if store doesn't auto-persist immediately)
+        // AuthController.updateUserProfile(updatedUser); 
+        
+        Alert.alert("Sukses", "Foto profil berhasil diperbarui!");
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Gagal mengambil gambar.");
+    }
+  };
 
   // State untuk Modal Edit
   const [isModalVisible, setModalVisible] = useState(false);
@@ -57,10 +80,14 @@ const ProfileScreen = () => {
   // Fungsi Menyimpan Perubahan
   const handleSaveProfile = () => {
     if (!editData.name || !editData.school) {
-      Alert.alert("Error", "Nama dan Sekolah tidak boleh kosong!");
-      return;
+        Alert.alert("Error", "Nama dan Sekolah tidak boleh kosong!");
+        return;
     }
     setUser(editData); // Simpan data baru
+    
+    // Update Global Store
+    store.dispatch(ActionTypes.USER_UPDATE_PROFILE, editData);
+
     setModalVisible(false); // Tutup modal
     Alert.alert("Sukses", "Profil berhasil diperbarui!");
   };
@@ -98,10 +125,14 @@ const ProfileScreen = () => {
 
             <View style={styles.headerContent}>
               <View style={styles.avatarContainer}>
-                <Text style={styles.avatarText}>
-                  {user.name ? user.name.charAt(0).toUpperCase() : '?'}
-                </Text>
-                <TouchableOpacity style={styles.editAvatarButton}>
+                {user.avatar ? (
+                  <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>
+                    {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                  </Text>
+                )}
+                <TouchableOpacity style={styles.editAvatarButton} onPress={handlePickAvatar}>
                   <Ionicons name="camera" size={16} color="#3b82f6" />
                 </TouchableOpacity>
               </View>
@@ -346,6 +377,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
     marginBottom: 16,
     position: 'relative',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
   },
   avatarText: {
     fontSize: 40,

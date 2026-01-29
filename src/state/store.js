@@ -309,6 +309,7 @@ class Store {
             const stateToPersist = {
                 auth: this.state.auth,
                 user: this.state.user,
+                reports: this.state.reports, // Added reports persistence
                 ui: {
                     theme: this.state.ui.theme,
                     language: this.state.ui.language
@@ -332,6 +333,7 @@ class Store {
                 
                 if (parsedState.auth) this.state.auth = parsedState.auth;
                 if (parsedState.user) this.state.user = parsedState.user;
+                if (parsedState.reports) this.state.reports = parsedState.reports; // Restore reports
                 if (parsedState.ui) {
                     this.state.ui.theme = parsedState.ui.theme;
                     this.state.ui.language = parsedState.ui.language;
