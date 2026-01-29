@@ -3,9 +3,9 @@
  * Wrapper around localStorage with additional features
  * @module services/storage/local-storage
  */
-import { StorageService } from './storage.services.js';
-import { StorageKeys, STORAGE_PREFIX } from '../../config/storage.config.js';
+import { STORAGE_PREFIX, StorageKeys } from '../../config/storage.config.js';
 import { Logger } from '../../utils/logger.js';
+import { StorageService } from './storage.services.js';
 /**
  * LocalStorage Service Class
  * Enhanced localStorage with expiration, compression, and encryption
@@ -169,6 +169,33 @@ export class LocalStorageService extends StorageService {
      */
     getUnreadNotificationsCount() {
         return this.get(StorageKeys.notifications.unreadCount, 0);
+    }
+    /**
+     * Set deleted notifications cache
+     * @param {array} notifications - Notifications array
+     */
+    setDeletedNotifications(notifications) {
+        this.set(StorageKeys.notifications.deleted, notifications);
+    }
+    /**
+     * Get deleted notifications
+     * @returns {array}
+     */
+    getDeletedNotifications() {
+        return this.get(StorageKeys.notifications.deleted, []);
+    }
+    /**
+     * Add to deleted notifications
+     * @param {object} notification - Notification object
+     */
+    addDeletedNotification(notification) {
+        const deleted = this.getDeletedNotifications();
+        deleted.push({
+            ...notification,
+            deletedAt: Date.now()
+        });
+        this.setDeletedNotifications(deleted);
+        Logger.debug('🗑️ Notification archived');
     }
     /**
      * Set current screen

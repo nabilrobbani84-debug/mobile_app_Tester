@@ -159,7 +159,10 @@ export const StorageKeys = {
         pushSubscription: `${STORAGE_PREFIX}push_subscription`,
         
         // Notification cache timestamp
-        cacheTimestamp: `${STORAGE_PREFIX}notifications_cache_timestamp`
+        cacheTimestamp: `${STORAGE_PREFIX}notifications_cache_timestamp`,
+
+        // Deleted notifications (archive)
+        deleted: `${STORAGE_PREFIX}notifications_deleted`
     },
     // ============================================
     // APP STATE KEYS

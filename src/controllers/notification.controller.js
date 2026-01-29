@@ -174,6 +174,14 @@ export const NotificationController = {
         Logger.info('🗑️ NotificationController: Delete notification', notificationId);
 
         try {
+            // 1. Find notification to archive
+            const currentState = store.getState();
+            const notificationToArchive = currentState.notifications.list.find(n => n.id === notificationId);
+
+            if (notificationToArchive) {
+                localStorageService.addDeletedNotification(notificationToArchive);
+            }
+
             // Update state
             store.dispatch(ActionTypes.NOTIFICATION_DELETE, notificationId);
 
