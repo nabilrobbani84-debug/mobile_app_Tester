@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -6,15 +7,14 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '../hooks/use-color-scheme';
+import { AppConfig } from '../src/config/app.config';
 // Import AuthProvider dari state management Anda
 import { NotificationController } from '../src/controllers/notification.controller';
-import { AuthProvider } from '../src/state/AuthContext';
+import { AuthProvider, useAuth } from '../src/state/AuthContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
-
-import * as Notifications from 'expo-notifications';
 
 // Configure Notification Handler
 Notifications.setNotificationHandler({
@@ -30,26 +30,39 @@ Notifications.setNotificationHandler({
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  console.log("RootLayout is rendering");
-  const colorScheme = useColorScheme();
+function AppStartupEffects() {
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Hide the native splash screen immediately when the root layout mounts
-    // We will show our CUSTOM JS Splash Screen (app/index.tsx) instead
     SplashScreen.hideAsync();
+  }, []);
 
-    // Start Notification Scheduler
-    NotificationController.startScheduler();
+  useEffect(() => {
+    if (!AppConfig.features.enableNotifications || !isAuthenticated) {
+      NotificationController.stopScheduler();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      NotificationController.startScheduler();
+    }, 1200);
 
     return () => {
-        NotificationController.stopScheduler();
+      clearTimeout(timer);
+      NotificationController.stopScheduler();
     };
-  }, []);
+  }, [isAuthenticated]);
+
+  return null;
+}
+
+export default function RootLayout() {
+  const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
+        <AppStartupEffects />
         <Stack>
           {/* Tambahkan ini: Sembunyikan header untuk halaman index (Splash) */}
           <Stack.Screen name="index" options={{ headerShown: false }} />

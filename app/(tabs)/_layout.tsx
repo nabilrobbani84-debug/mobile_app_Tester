@@ -58,6 +58,16 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="sekolah"
+        options={{
+          title: 'Sekolah',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'location' : 'location-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="notifikasi"
         options={{
           title: 'Notifikasi',

@@ -3,9 +3,12 @@
  * API calls for user/profile management
  * @module services/api/user.api
  */
-import { apiService } from './api.services.js';
-import { ApiEndpoints, USE_MOCK_API, MOCK_API_DELAY } from '../../config/api.config.js';
+import { ApiEndpoints, USE_MOCK_API } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
+import { apiService } from './api.services.js';
+
+import { store } from '../../state/store.js';
+import { MOCK_SISWA_DB } from './auth.api.js';
 
 /*
  * Mock User API
@@ -17,6 +20,40 @@ const MockUserAPI = {
     async getProfile() {
         await new Promise(resolve => setTimeout(resolve, 500));
         Logger.info('🎭 Mock API: Get Profile');
+        
+        // Get current user ID from store
+        const state = store.getState();
+        const currentUserId = state.user?.profile?.id;
+        
+        // Find in mock DB
+        const user = MOCK_SISWA_DB.find(u => u.id.toString() === currentUserId?.toString());
+        
+        if (user) {
+             return {
+                success: true,
+                data: {
+                    id: user.id.toString(),
+                    name: user.nama,
+                    nisn: user.nis,
+                    school: user.sekolah_nama || `Sekolah ID ${user.sekolah_id}`,
+                    email: user.email,
+                    phone: '081234567890',
+                    address: 'Alamat Siswa',
+                    birth_date: user.tgl_lahir,
+                    gender: user.gender === 'P' ? 'F' : 'M',
+                    height: user.height || 160,
+                    weight: user.weight || 50,
+                    hb_last: user.hb_last || 12.5,
+                    consumption_count: user.consumption_count || 0,
+                    total_target: user.total_target || 90,
+                    avatar: user.avatar || null,
+                    created_at: '2023-10-01T00:00:00Z',
+                    updated_at: new Date().toISOString()
+                }
+            };
+        }
+
+        // Fallback for demo if no login state
         return {
             success: true,
             data: {
@@ -46,7 +83,29 @@ const MockUserAPI = {
      */
     async updateProfile(data) {
         await new Promise(resolve => setTimeout(resolve, 1000));
-        Logger.info('🎭 Mock API: Update Profile', data);
+        Logger.info('🎭 Mock API: Update Profile with data:', data);
+        
+        // Update MOCK_SISWA_DB if possible
+        const state = store.getState();
+        const currentUserId = state.user?.profile?.id;
+        
+        const userIndex = MOCK_SISWA_DB.findIndex(u => u.id.toString() === currentUserId?.toString());
+        
+        if (userIndex !== -1) {
+            // Map frontend fields back to DB fields
+            const dbUser = MOCK_SISWA_DB[userIndex];
+            
+            if (data.name) dbUser.nama = data.name;
+            if (data.school) dbUser.sekolah_nama = data.school; // Update school name
+            if (data.height) dbUser.height = parseFloat(data.height);
+            if (data.weight) dbUser.weight = parseFloat(data.weight);
+            if (data.birthPlace) dbUser.tmp_lahir = data.birthPlace;
+            if (data.avatar) dbUser.avatar = data.avatar; // Update avatar
+            // Add other fields as needed
+            
+            Logger.info('✅ Mock DB Updated:', dbUser);
+        }
+
         return {
             success: true,
             message: 'Profile updated successfully',

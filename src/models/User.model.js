@@ -16,6 +16,7 @@ export class UserModel {
         this.phone = data.phone || null;
         this.school = data.school || null;
         this.schoolId = data.schoolId || null;
+        this.schoolCode = data.schoolCode || data.school_code || null;
         this.address = data.address || null;
         this.birthPlace = data.birthPlace || data.birth_place || null;
         this.birthDate = data.birthDate || data.birth_date || null;
@@ -161,6 +162,7 @@ export class UserModel {
             phone: this.phone,
             school: this.school,
             schoolId: this.schoolId,
+            schoolCode: this.schoolCode,
             address: this.address,
             birthPlace: this.birthPlace,
             birthDate: this.birthDate,
@@ -186,6 +188,7 @@ export class UserModel {
             phone: this.phone,
             school: this.school,
             school_id: this.schoolId,
+            school_code: this.schoolCode,
             address: this.address,
             birth_place: this.birthPlace,
             birth_date: this.birthDate,
@@ -225,6 +228,7 @@ export class UserModel {
             phone: data.phone,
             school: data.school,
             schoolId: data.school_id,
+            schoolCode: data.school_code,
             address: data.address,
             birthPlace: data.birth_place,
             birthDate: data.birth_date,

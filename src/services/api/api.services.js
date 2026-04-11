@@ -285,6 +285,7 @@ export class APIService {
                             status: response.status,
                             statusText: response.statusText,
                             data: responseData,
+                            url: config.url || '',
                             response
                         };
                     }

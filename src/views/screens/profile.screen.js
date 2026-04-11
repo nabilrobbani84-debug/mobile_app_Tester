@@ -18,7 +18,8 @@ import {
     View
 } from 'react-native';
 
-import { ActionTypes, store } from '../../state/store'; // Ensure ActionTypes is imported
+import { UserAPI } from '../../services/api/user.api'; // Import UserAPI
+import { ActionTypes, store } from '../../state/store';
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -56,8 +57,13 @@ const ProfileScreen = () => {
         // 4. Update Global Store & Persist
         store.dispatch(ActionTypes.USER_UPDATE_PROFILE, { avatar: newAvatarUri });
         
-        // 5. Save to Storage via Controller (Optional explicit save if store doesn't auto-persist immediately)
-        // AuthController.updateUserProfile(updatedUser); 
+        // 5. Save to Storage via API
+        try {
+           await UserAPI.updateProfile({ avatar: newAvatarUri });
+           Logger.info("Avatar updated in DB");
+        } catch (err) {
+           console.error("Failed to persist avatar:", err);
+        }
         
         Alert.alert("Sukses", "Foto profil berhasil diperbarui!");
       }
@@ -78,18 +84,31 @@ const ProfileScreen = () => {
   };
 
   // Fungsi Menyimpan Perubahan
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!editData.name || !editData.school) {
         Alert.alert("Error", "Nama dan Sekolah tidak boleh kosong!");
         return;
     }
-    setUser(editData); // Simpan data baru
-    
-    // Update Global Store
-    store.dispatch(ActionTypes.USER_UPDATE_PROFILE, editData);
 
-    setModalVisible(false); // Tutup modal
-    Alert.alert("Sukses", "Profil berhasil diperbarui!");
+    try {
+        // Show loading indicator usually handled by global state or local state, simplified here
+        const response = await UserAPI.updateProfile(editData);
+        
+        if (response.success) {
+            setUser(editData); // Simpan data baru
+            
+            // Update Global Store
+            store.dispatch(ActionTypes.USER_UPDATE_PROFILE, editData);
+    
+            setModalVisible(false); // Tutup modal
+            Alert.alert("Sukses", "Profil berhasil diperbarui!");
+        } else {
+             Alert.alert("Error", response.message || "Gagal memperbarui profil");
+        }
+    } catch (error) {
+        console.error("Update profile failed:", error);
+        Alert.alert("Error", "Gagal memperbarui profil. Silakan coba lagi.");
+    }
   };
 
   const handleLogout = () => {

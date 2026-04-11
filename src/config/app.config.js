@@ -8,20 +8,28 @@
 // Environment configurations
 const environments = {
   development: {
+    label: 'Development',
+    badgeColor: '#eab308', // yellow-500
     // Android Emulator uses 10.0.2.2 to access host localhost.
-    // Ensure your Django backend is running on port 8000.
+    // FastAPI backend berjalan di port 8000.
+    // Untuk device fisik, ganti dengan IP lokal PC kamu (misal: http://192.168.x.x:8000/api)
     apiUrl: process.env.REACT_APP_API_URL || 'http://10.0.2.2:8000/api',
-    useMockApi: true, // Set to true to test UI without backend dependencies
+    // Mock API dimatikan secara default agar aplikasi langsung menggunakan FastAPI Backend
+    useMockApi: process.env.REACT_APP_USE_MOCK_API === 'true' ? true : false,
     debug: true,
     logLevel: 'debug'
   },
   staging: {
+    label: 'Staging',
+    badgeColor: '#a855f7', // purple-500
     apiUrl: process.env.REACT_APP_API_URL || 'https://staging-api.modiva.com/api',
     useMockApi: false,
     debug: true,
     logLevel: 'info'
   },
   production: {
+    label: 'Production',
+    badgeColor: 'transparent',
     apiUrl: process.env.REACT_APP_API_URL || 'https://api.modiva.com/api',
     useMockApi: false,
     debug: false,
@@ -64,8 +72,8 @@ export const AppConfig = {
   
   // Feature flags
   features: {
-    enableAnalytics: true,
-    enableNotifications: true,
+    enableAnalytics: currentEnv !== 'development' || process.env.REACT_APP_ENABLE_ANALYTICS === 'true',
+    enableNotifications: process.env.REACT_APP_ENABLE_NOTIFICATIONS === 'false' ? false : true,
     enableOfflineMode: true,
     enableCache: true
   },
@@ -105,8 +113,8 @@ export const AppConfig = {
   
   // Debug settings
   debug: {
-    logApiCalls: currentEnv === 'development',
-    logReduxActions: currentEnv === 'development',
+    logApiCalls: process.env.REACT_APP_VERBOSE_LOGS === 'true',
+    logReduxActions: process.env.REACT_APP_VERBOSE_LOGS === 'true',
     enableReactQueryDevtools: currentEnv === 'development'
   }
 };

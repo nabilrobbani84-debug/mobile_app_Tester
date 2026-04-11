@@ -11,6 +11,7 @@ import { NotificationAPI } from '../services/api/notification.api.js';
 import { localStorageService } from '../services/storage/local.storage.js';
 import { ActionTypes, store } from '../state/store.js';
 import { Logger } from '../utils/logger.js';
+import { getAuthToken } from '../utils/helpers/storageHelpers.js';
 
 /**
  * Notification Controller
@@ -44,6 +45,13 @@ export const NotificationController = {
         Logger.info('🔔 NotificationController: Loading notifications');
 
         try {
+            // Guard: pastikan user sudah login (ada token) sebelum hit API
+            const token = await getAuthToken();
+            if (!token) {
+                Logger.warn('⚠️ loadNotifications: No auth token, skipping API call.');
+                return;
+            }
+
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'notifications', isLoading: true });
 
             // Check cache first
@@ -341,13 +349,21 @@ export const NotificationController = {
         // 1. Request permissions first
         await this.requestPermissions();
 
-        // 2. Initial check
-        this.checkReminders();
-        this.loadNotifications();
+        // 2. Guard: hanya jalankan jika sudah ada token (user sudah login)
+        const token = await getAuthToken();
+        if (token) {
+            this.checkReminders();
+            this.loadNotifications();
+        } else {
+            Logger.warn('⚠️ Scheduler started but user not logged in, skipping initial checks.');
+        }
 
         // 3. Check every minute
-        this.schedulerInterval = setInterval(() => {
-            this.checkReminders();
+        this.schedulerInterval = setInterval(async () => {
+            const currentToken = await getAuthToken();
+            if (currentToken) {
+                this.checkReminders();
+            }
         }, 60 * 1000);
     },
 

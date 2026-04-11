@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: errorMessage };
       }
     } catch (error) {
-      console.error("Login Error:", error);
+      console.warn("Login Error:", error);
       const errorMessage = error.userMessage || error.message || 'Terjadi kesalahan jaringan';
       dispatch({ 
         type: AUTH_ACTIONS.LOGIN_FAILURE, 

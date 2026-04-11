@@ -211,7 +211,11 @@ export const ReportController = {
             }
 
         } catch (error) {
-            Logger.error('❌ Failed to load reports:', error);
+            if (error?.status === 401 || error?.code === 'HTTP_401' || error?.message?.includes('401') || error?.message?.includes('Token')) {
+                Logger.warn('⚠️ Sedang memuat reports tetapi sesi tidak valid / token expired (401)');
+            } else {
+                Logger.error('❌ Failed to load reports:', error);
+            }
             
             store.dispatch(ActionTypes.REPORT_SET_ERROR, error.message);
 

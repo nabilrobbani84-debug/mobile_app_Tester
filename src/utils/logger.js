@@ -4,6 +4,7 @@
  * Centralized logging with different levels
  * @module utils/logger
  */
+import { AppConfig } from '../config/app.config.js';
 
 // Log levels
 const LogLevel = {
@@ -18,6 +19,17 @@ const LogLevel = {
 const getCurrentLogLevel = () => {
   const env = process.env.NODE_ENV || 'development';
   const debug = process.env.REACT_APP_DEBUG === 'true';
+  const configuredLevel = AppConfig?.environment?.logLevel;
+
+  if (configuredLevel === 'error') {
+    return LogLevel.ERROR;
+  }
+  if (configuredLevel === 'warn') {
+    return LogLevel.WARN;
+  }
+  if (configuredLevel === 'info') {
+    return LogLevel.INFO;
+  }
   
   if (env === 'production' && !debug) {
     return LogLevel.ERROR;
@@ -83,7 +95,7 @@ export class Logger {
    * Log API request
    */
   static apiRequest(method, url, data = {}) {
-    if (currentLogLevel <= LogLevel.DEBUG) {
+    if (currentLogLevel <= LogLevel.DEBUG && AppConfig?.debug?.logApiCalls) {
       console.groupCollapsed(`🌐 [API] ${method} ${url}`);
       console.log('Request Data:', data);
       console.groupEnd();
@@ -94,7 +106,7 @@ export class Logger {
    * Log API response
    */
   static apiResponse(response, duration) {
-    if (currentLogLevel <= LogLevel.DEBUG) {
+    if (currentLogLevel <= LogLevel.DEBUG && AppConfig?.debug?.logApiCalls) {
       console.groupCollapsed(`✅ [API] Response (${duration}ms)`);
       console.log('Response:', response);
       console.groupEnd();
@@ -107,7 +119,11 @@ export class Logger {
   static apiError(error, context = '') {
     if (currentLogLevel <= LogLevel.ERROR) {
       console.groupCollapsed(`🚨 [API ERROR] ${context}`);
-      console.error('Error Details:', error);
+      if (error && error.status && error.status >= 400 && error.status < 500) {
+        console.warn('Error Details:', error);
+      } else {
+        console.error('Error Details:', error);
+      }
       console.groupEnd();
     }
   }

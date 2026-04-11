@@ -4,8 +4,53 @@
  * @module services/api/auth.api
  */
 import { ApiEndpoints, MOCK_API_DELAY, USE_MOCK_API } from '../../config/api.config.js';
+import { isDevelopment } from '../../config/app.config.js';
 import { Logger } from '../../utils/logger.js';
 import { apiService } from './api.services.js';
+/**
+ * Mock Database from Screenshot
+ * Exporting it for use in UserAPI
+ */
+export const MOCK_SISWA_DB = [
+    { 
+        id: 1, nis: '10001', nama: 'Gita Hidayat', tmp_lahir: 'Depok', email: 'gita.hidayat@outlook.com', gender: 'L', tgl_lahir: '2010-05-25', sekolah_id: '3', sekolah_kode: '20223819', sekolah_nama: 'SMAN 1 KOTA DEPOK',
+        height: 155, weight: 45, hb_last: 12.0, consumption_count: 5, total_target: 90
+    },
+    { 
+        id: 2, nis: '10002', nama: 'Nanda Lestari', tmp_lahir: 'Bekasi', email: 'nanda.lestari@yahoo.com', gender: 'L', tgl_lahir: '2006-06-18', sekolah_id: '3', sekolah_kode: '20223819', sekolah_nama: 'SMAN 1 KOTA DEPOK',
+        height: 158, weight: 48, hb_last: 11.5, consumption_count: 10, total_target: 90 
+    },
+    { 
+        id: 3, nis: '10003', nama: 'Maya Hidayat', tmp_lahir: 'Bogor', email: 'maya.hidayat@yahoo.com', gender: 'L', tgl_lahir: '2010-01-13', sekolah_id: '3', sekolah_kode: '20223819', sekolah_nama: 'SMAN 1 KOTA DEPOK',
+        height: 152, weight: 42, hb_last: 12.2, consumption_count: 2, total_target: 90
+    },
+    { 
+        id: 4, nis: '10004', nama: 'Kartika Anggraini', tmp_lahir: 'Bandung', email: 'kartika.anggraini@gmail.com', gender: 'L', tgl_lahir: '2005-08-12', sekolah_id: '3', sekolah_kode: '20223819', sekolah_nama: 'SMAN 1 KOTA DEPOK',
+        height: 160, weight: 50, hb_last: 12.5, consumption_count: 0, total_target: 90
+    },
+    { id: 5, nis: '10005', nama: 'Toni Permata', tmp_lahir: 'Bandung', email: 'toni.permata@yahoo.com', gender: 'L', tgl_lahir: '2006-07-26', sekolah_id: '3', sekolah_kode: '20223819', sekolah_nama: 'SMAN 1 KOTA DEPOK' },
+    { id: 6, nis: '10006', nama: 'Indra Wijaya', tmp_lahir: 'Bekasi', email: 'indra.wijaya@outlook.com', gender: 'P', tgl_lahir: '2009-09-06', sekolah_id: '8', sekolah_kode: '20223818', sekolah_nama: 'SMAN 2 KOTA DEPOK' },
+    { id: 7, nis: '10007', nama: 'Lia Saputra', tmp_lahir: 'Bandung', email: 'lia.saputra@outlook.com', gender: 'P', tgl_lahir: '2008-03-03', sekolah_id: '8', sekolah_kode: '20223818', sekolah_nama: 'SMAN 2 KOTA DEPOK' },
+    { id: 8, nis: '10008', nama: 'Vina Lestari', tmp_lahir: 'Bogor', email: 'vina.lestari@gmail.com', gender: 'L', tgl_lahir: '2006-06-20', sekolah_id: '8', sekolah_kode: '20223818', sekolah_nama: 'SMAN 2 KOTA DEPOK' },
+    { id: 9, nis: '10009', nama: 'Eka Wijaya', tmp_lahir: 'Bandung', email: 'eka.wijaya@gmail.com', gender: 'L', tgl_lahir: '2008-06-07', sekolah_id: '8', sekolah_kode: '20223818', sekolah_nama: 'SMAN 2 KOTA DEPOK' },
+    { id: 10, nis: '10010', nama: 'Budi Wijaya', tmp_lahir: 'Tangerang', email: 'budi.wijaya@outlook.com', gender: 'P', tgl_lahir: '2005-07-13', sekolah_id: '12', sekolah_kode: '20223817', sekolah_nama: 'SMAN 3 KOTA DEPOK' },
+    { id: 11, nis: '10011', nama: 'Gita Santoso', tmp_lahir: 'Bekasi', email: 'gita.santoso@gmail.com', gender: 'P', tgl_lahir: '2010-08-07', sekolah_id: '8', sekolah_kode: '20223818', sekolah_nama: 'SMAN 2 KOTA DEPOK' },
+    { id: 12, nis: '10012', nama: 'Andi Syahputra', tmp_lahir: 'Tangerang', email: 'andi.syahputra@gmail.com', gender: 'P', tgl_lahir: '2008-04-10', sekolah_id: '12', sekolah_kode: '20223817', sekolah_nama: 'SMAN 3 KOTA DEPOK' },
+    { id: 13, nis: '10013', nama: 'Andi Santoso', tmp_lahir: 'Bogor', email: 'andi.santoso@gmail.com', gender: 'P', tgl_lahir: '2009-02-03', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    { id: 14, nis: '10014', nama: 'Gita Wijaya', tmp_lahir: 'Bogor', email: 'gita.wijaya@yahoo.com', gender: 'P', tgl_lahir: '2010-05-08', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    { id: 15, nis: '10015', nama: 'Sinta Pratama', tmp_lahir: 'Depok', email: 'sinta.pratama@gmail.com', gender: 'L', tgl_lahir: '2005-12-17', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    { id: 16, nis: '10016', nama: 'Indra Wijaya', tmp_lahir: 'Surabaya', email: 'indra.wijaya@outlook.com', gender: 'P', tgl_lahir: '2005-12-23', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    { id: 17, nis: '10017', nama: 'Toni Permata', tmp_lahir: 'Jakarta', email: 'toni.permata@gmail.com', gender: 'L', tgl_lahir: '2010-05-02', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    { id: 18, nis: '10018', nama: 'Kartika Lestari', tmp_lahir: 'Depok', email: 'kartika.lestari@yahoo.com', gender: 'L', tgl_lahir: '2005-12-17', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    { id: 19, nis: '10019', nama: 'Citra Lestari', tmp_lahir: 'Bekasi', email: 'citra.lestari@yahoo.com', gender: 'P', tgl_lahir: '2007-02-14', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    { id: 20, nis: '10020', nama: 'Dewi Wijaya', tmp_lahir: 'Bandung', email: 'dewi.wijaya@gmail.com', gender: 'L', tgl_lahir: '2006-05-12', sekolah_id: '9', sekolah_kode: '20258460', sekolah_nama: 'SMAN 15 Depok' },
+    // User Sesuai Hint di Login Screen
+    { 
+        id: 99, nis: '0110222079', nama: 'Rizky Pratama', tmp_lahir: 'Jakarta', email: 'rizky.pratama@modiva.id', gender: 'L', tgl_lahir: '2008-08-17', sekolah_id: '1', sekolah_kode: 'SMPN1JKT', sekolah_nama: 'SMPN 1 Jakarta',
+        height: 170, weight: 60, hb_last: 13.5, consumption_count: 15, total_target: 90
+    }
+];
+
 /**
  * Mock API responses for development
  */
@@ -21,36 +66,27 @@ const MockAuthAPI = {
         Logger.info('🎭 Mock API: Login Siswa', credentials);
 
         // Mock Database from Screenshot
-        const MOCK_SISWA_DB = [
-            { id: 1, nis: '10001', nama: 'Gita Hidayat', tmp_lahir: 'Depok', email: 'gita.hidayat@outlook.com', gender: 'L', tgl_lahir: '2010-05-25', sekolah_id: '3' },
-            { id: 2, nis: '10002', nama: 'Nanda Lestari', tmp_lahir: 'Bekasi', email: 'nanda.lestari@yahoo.com', gender: 'L', tgl_lahir: '2006-06-18', sekolah_id: '3' },
-            { id: 3, nis: '10003', nama: 'Maya Hidayat', tmp_lahir: 'Bogor', email: 'maya.hidayat@yahoo.com', gender: 'L', tgl_lahir: '2010-01-13', sekolah_id: '3' },
-            { id: 4, nis: '10004', nama: 'Kartika Anggraini', tmp_lahir: 'Bandung', email: 'kartika.anggraini@gmail.com', gender: 'L', tgl_lahir: '2005-08-12', sekolah_id: '3' },
-            { id: 5, nis: '10005', nama: 'Toni Permata', tmp_lahir: 'Bandung', email: 'toni.permata@yahoo.com', gender: 'L', tgl_lahir: '2006-07-26', sekolah_id: '3' },
-            { id: 6, nis: '10006', nama: 'Indra Wijaya', tmp_lahir: 'Bekasi', email: 'indra.wijaya@outlook.com', gender: 'P', tgl_lahir: '2009-09-06', sekolah_id: '8' },
-            { id: 7, nis: '10007', nama: 'Lia Saputra', tmp_lahir: 'Bandung', email: 'lia.saputra@outlook.com', gender: 'P', tgl_lahir: '2008-03-03', sekolah_id: '8' },
-            { id: 8, nis: '10008', nama: 'Vina Lestari', tmp_lahir: 'Bogor', email: 'vina.lestari@gmail.com', gender: 'L', tgl_lahir: '2006-06-20', sekolah_id: '8' },
-            { id: 9, nis: '10009', nama: 'Eka Wijaya', tmp_lahir: 'Bandung', email: 'eka.wijaya@gmail.com', gender: 'L', tgl_lahir: '2008-06-07', sekolah_id: '8' },
-            { id: 10, nis: '10010', nama: 'Budi Wijaya', tmp_lahir: 'Tangerang', email: 'budi.wijaya@outlook.com', gender: 'P', tgl_lahir: '2005-07-13', sekolah_id: '12' },
-            { id: 11, nis: '10011', nama: 'Gita Santoso', tmp_lahir: 'Bekasi', email: 'gita.santoso@gmail.com', gender: 'P', tgl_lahir: '2010-08-07', sekolah_id: '8' },
-            { id: 12, nis: '10012', nama: 'Andi Syahputra', tmp_lahir: 'Tangerang', email: 'andi.syahputra@gmail.com', gender: 'P', tgl_lahir: '2008-04-10', sekolah_id: '12' },
-            { id: 13, nis: '10013', nama: 'Andi Santoso', tmp_lahir: 'Bogor', email: 'andi.santoso@gmail.com', gender: 'P', tgl_lahir: '2009-02-03', sekolah_id: '9' },
-            { id: 14, nis: '10014', nama: 'Gita Wijaya', tmp_lahir: 'Bogor', email: 'gita.wijaya@yahoo.com', gender: 'P', tgl_lahir: '2010-05-08', sekolah_id: '9' },
-            { id: 15, nis: '10015', nama: 'Sinta Pratama', tmp_lahir: 'Depok', email: 'sinta.pratama@gmail.com', gender: 'L', tgl_lahir: '2005-12-17', sekolah_id: '9' },
-            { id: 16, nis: '10016', nama: 'Indra Wijaya', tmp_lahir: 'Surabaya', email: 'indra.wijaya@outlook.com', gender: 'P', tgl_lahir: '2005-12-23', sekolah_id: '9' },
-            { id: 17, nis: '10017', nama: 'Toni Permata', tmp_lahir: 'Jakarta', email: 'toni.permata@gmail.com', gender: 'L', tgl_lahir: '2010-05-02', sekolah_id: '9' },
-            { id: 18, nis: '10018', nama: 'Kartika Lestari', tmp_lahir: 'Depok', email: 'kartika.lestari@yahoo.com', gender: 'L', tgl_lahir: '2005-12-17', sekolah_id: '9' },
-            { id: 19, nis: '10019', nama: 'Citra Lestari', tmp_lahir: 'Bekasi', email: 'citra.lestari@yahoo.com', gender: 'P', tgl_lahir: '2007-02-14', sekolah_id: '9' },
-            { id: 20, nis: '10020', nama: 'Dewi Wijaya', tmp_lahir: 'Bandung', email: 'dewi.wijaya@gmail.com', gender: 'L', tgl_lahir: '2006-05-12', sekolah_id: '9' },
-            // User Sesuai Hint di Login Screen
-            { id: 99, nis: '0110222079', nama: 'Rizky Pratama', tmp_lahir: 'Jakarta', email: 'rizky.pratama@modiva.id', gender: 'L', tgl_lahir: '2008-08-17', sekolah_id: 'SMPN1JKT' }
-        ];
+        // Use global MOCK_SISWA_DB defined at top of file
 
-        // Find user by NIS and School ID
-        const matchedUser = MOCK_SISWA_DB.find(u => 
-            u.nis === credentials.nisn && 
-            u.sekolah_id === credentials.schoolId
-        );
+        const submittedNis = String(credentials.nisn || credentials.nis || '').trim();
+        const submittedSchoolKey = String(
+            credentials.schoolCode ||
+            credentials.school_code ||
+            credentials.schoolId ||
+            credentials.school_id ||
+            ''
+        ).trim().toUpperCase() || null;
+
+        // Find user by NISN (school code optional)
+        const matchedUser = MOCK_SISWA_DB.find(u => {
+            if (String(u.nis) !== submittedNis) return false;
+            if (!submittedSchoolKey) return true;
+
+            return (
+                String(u.sekolah_kode || '').toUpperCase() === submittedSchoolKey ||
+                String(u.sekolah_id || '').toUpperCase() === submittedSchoolKey
+            );
+        });
         
         if (matchedUser) {
             return {
@@ -61,20 +97,21 @@ const MockAuthAPI = {
                     id: matchedUser.id.toString(),
                     name: matchedUser.nama,
                     nisn: matchedUser.nis,
-                    school: `Sekolah ID ${matchedUser.sekolah_id}`, // Generic school name
+                    school: matchedUser.sekolah_nama || `Sekolah ID ${matchedUser.sekolah_id}`, 
                     schoolId: matchedUser.sekolah_id,
+                    schoolCode: matchedUser.sekolah_kode,
                     role: 'siswa',
-                    hbLast: 12.5, // Default mockup data
-                    consumptionCount: 8,
-                    totalTarget: 48,
+                    hbLast: matchedUser.hb_last || 12.5, 
+                    consumptionCount: matchedUser.consumption_count || 0,
+                    totalTarget: matchedUser.total_target || 90,
                     email: matchedUser.email,
                     phone: '081234567890', // Default
                     address: 'Alamat Siswa', // Default
                     birthPlace: matchedUser.tmp_lahir,
                     birthDate: matchedUser.tgl_lahir,
                     gender: matchedUser.gender === 'P' ? 'F' : 'M', // Map L/P to M/F
-                    height: 160,
-                    weight: 50,
+                    height: matchedUser.height || 160,
+                    weight: matchedUser.weight || 50,
                     avatar: null,
                     createdAt: '2025-08-11T03:12:35.000000', // From screenshot
                     updatedAt: new Date().toISOString()
@@ -86,7 +123,7 @@ const MockAuthAPI = {
         throw {
             status: 401,
             message: 'Invalid credentials',
-            userMessage: 'NISN atau ID Sekolah salah / tidak terdaftar'
+            userMessage: 'NISN atau Kode Sekolah salah / tidak terdaftar'
         };
     },
     /**
@@ -194,6 +231,61 @@ const MockAuthAPI = {
  * Authentication API
  */
 export const AuthAPI = {
+    normalizeStudentLoginPayload(credentials = {}) {
+        const nis = String(credentials.nis || credentials.nisn || '').trim();
+        const schoolKey = String(
+            credentials.schoolId ||
+            credentials.school_id ||
+            credentials.schoolCode ||
+            credentials.school_code ||
+            ''
+        ).trim();
+
+        return {
+            nis,
+            nisn: nis,
+            schoolId: schoolKey,
+            school_id: schoolKey,
+            schoolCode: schoolKey.toUpperCase(),
+            school_code: schoolKey.toUpperCase()
+        };
+    },
+
+    extractApiErrorMessage(error) {
+        const payload = error?.data;
+        const fieldErrors = payload?.errors;
+
+        if (typeof payload?.message === 'string' && payload.message.trim()) {
+            return payload.message;
+        }
+
+        if (typeof payload?.detail === 'string' && payload.detail.trim()) {
+            return payload.detail;
+        }
+
+        if (Array.isArray(payload?.detail)) {
+            const firstDetail = payload.detail
+                .map((item) => item?.msg || item?.message || item?.detail)
+                .find(Boolean);
+
+            if (firstDetail) {
+                return firstDetail;
+            }
+        }
+
+        if (fieldErrors && typeof fieldErrors === 'object') {
+            const firstFieldError = Object.values(fieldErrors)
+                .flat()
+                .find(Boolean);
+
+            if (typeof firstFieldError === 'string' && firstFieldError.trim()) {
+                return firstFieldError;
+            }
+        }
+
+        return error?.userMessage || error?.message || 'Login gagal';
+    },
+
     /**
      * Login siswa
      * @param {object} credentials - Login credentials
@@ -202,14 +294,39 @@ export const AuthAPI = {
      * @returns {Promise<object>} - Login response
      */
     async loginSiswa(credentials) {
+        const normalizedCredentials = this.normalizeStudentLoginPayload(credentials);
+
         if (USE_MOCK_API) {
-            return await MockAuthAPI.loginSiswa(credentials);
+            return await MockAuthAPI.loginSiswa(normalizedCredentials);
         }
         
         const endpoint = ApiEndpoints.auth.loginSiswa;
-        return await apiService.post(endpoint.url, credentials, {
-            timeout: endpoint.timeout
-        });
+        try {
+            return await apiService.post(endpoint.url, normalizedCredentials, {
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            error.userMessage = this.extractApiErrorMessage(error);
+
+            const shouldFallbackToMock =
+                isDevelopment() &&
+                (error?.isTimeout ||
+                 error?.code === 'TIMEOUT_ERROR' ||
+                 error?.code === 'NETWORK_ERROR' ||
+                 error?.message === 'Waktu permintaan habis' ||
+                 error?.message === 'Gangguan koneksi internet');
+
+            if (!shouldFallbackToMock) {
+                throw error;
+            }
+
+            Logger.warn('⚠️ Login siswa fallback ke Mock API karena backend tidak dapat dijangkau.', {
+                reason: error?.message,
+                code: error?.code
+            });
+
+            return await MockAuthAPI.loginSiswa(normalizedCredentials);
+        }
     },
     /**
      * Login guru

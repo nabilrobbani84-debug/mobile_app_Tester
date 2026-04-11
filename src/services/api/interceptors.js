@@ -121,8 +121,19 @@ export const ErrorInterceptors = {
     
     // HTTP error
     if (error.status) {
-      error.message = ApiErrorMessages[error.status] || 
-                     error.data?.message || 
+      const firstValidationError = error.data?.errors && typeof error.data.errors === 'object'
+        ? Object.values(error.data.errors).flat().find(Boolean)
+        : null;
+
+      const firstDetailMessage = Array.isArray(error.data?.detail)
+        ? error.data.detail.map(item => item?.msg || item?.message || item?.detail).find(Boolean)
+        : null;
+
+      error.message = error.data?.message ||
+                     error.data?.detail ||
+                     firstDetailMessage ||
+                     firstValidationError ||
+                     ApiErrorMessages[error.status] || 
                      ApiErrorMessages.UNKNOWN_ERROR;
       error.code = `HTTP_${error.status}`;
     }
@@ -134,26 +145,39 @@ export const ErrorInterceptors = {
    * Handle unauthorized access
    */
   handleUnauthorized: async (error) => {
-    if (error.status === HttpStatus.UNAUTHORIZED) {
-      Logger.warn('Unauthorized access detected');
+    if (error.status === HttpStatus.UNAUTHORIZED || error?.code === 'HTTP_401') {
+      // Jangan redirect ke login jika error berasal dari endpoint auth/login
+      // (401 di sini = salah kredensial, bukan sesi expired)
+      const requestUrl = error.url || error.config?.url || '';
+      const isLoginEndpoint = requestUrl.includes('/auth/login');
+      if (isLoginEndpoint || error.skipUnauthorizedRedirect) {
+        Logger.warn('Login gagal (401) — bukan sesi expired, skip auto-logout');
+        return error;
+      }
+
+      Logger.warn('Unauthorized access detected — sesi berakhir, auto-logout');
       
       // Clear invalid tokens
       await StorageService.clearTokens();
       
-      // Redirect to login page if in browser environment
-      if (typeof window !== 'undefined') {
+      try {
         // Dispatch event for auth layer to handle
-        const event = new CustomEvent('auth:unauthorized', {
-          detail: { error }
+        const { store, ActionTypes } = require('../../state/store.js');
+        store.dispatch({ type: ActionTypes.AUTH_LOGOUT });
+        store.dispatch({ 
+          type: ActionTypes.UI_SHOW_TOAST, 
+          payload: { type: 'error', message: 'Sesi anda telah berakhir, mohon login kembali.' } 
         });
-        window.dispatchEvent(event);
         
-        // If no listener handles it, redirect after delay
-        setTimeout(() => {
-          if (window.location.pathname !== '/login') {
-            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        let router;
+        try {
+          router = require('expo-router').router;
+          if (router) {
+            router.replace('/login');
           }
-        }, 1000);
+        } catch (_error) {}
+      } catch (err) {
+        Logger.warn('Failed to dispatch auto-logout action', err);
       }
     }
     return error;

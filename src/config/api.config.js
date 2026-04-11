@@ -125,6 +125,11 @@ export const ApiEndpoints = {
   notifications: {
     getAll: { url: '/notifications', method: 'GET', timeout: 5000 },
     markAsRead: { url: '/notifications/:id/read', method: 'PUT', timeout: 5000 }
+  },
+  schools: {
+    getAll: { url: '/schools', method: 'GET', timeout: 10000 },
+    getById: { url: '/schools/:id', method: 'GET', timeout: 5000 },
+    getLocation: { url: '/schools/:id/location', method: 'GET', timeout: 5000 }
   }
 };
 

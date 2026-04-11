@@ -2,17 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import AppConfig from '../../config/app.config';
 import { COLORS } from '../../config/theme';
 import { AuthController } from '../../controllers/auth.controller';
 import { store } from '../../state/store';
+import { SchoolAPI } from '../../services/api/school.api';
 
 export default function HomeScreen() {
+  const matchesUserSchool = (school, profile) => {
+    if (!school || !profile) return false;
+    return school.id === profile.schoolId || school.kode === profile.schoolCode;
+  };
+
   // State for User Data & Reports
   const [user, setUser] = useState(store.getState().user.profile || {});
   // Ambil 5 report terakhir untuk di home
   const [reports, setReports] = useState(store.getState().reports.list.slice(0, 5) || []);
+  const [mySchool, setMySchool] = useState(null);
 
   // Refresh data when screen focuses
   useFocusEffect(
@@ -31,6 +39,26 @@ export default function HomeScreen() {
 
       // 1. Initial Get
       updateState();
+
+      // Fetch School Data
+      const currentProfile = store.getState().user.profile;
+      const currentSchoolKey = currentProfile?.schoolCode || currentProfile?.schoolId;
+      if (currentSchoolKey) {
+         SchoolAPI.getById(currentSchoolKey).then(res => {
+             if (res.success && res.data) {
+                 setMySchool(res.data);
+             }
+         }).catch(err => console.log('Gagal ambil data sekolah:', err));
+      } else if (currentProfile?.schoolId || currentProfile?.schoolCode) {
+         SchoolAPI.getAll().then(res => {
+             if (res.success && Array.isArray(res.data)) {
+                 const foundSchool = res.data.find((school) => matchesUserSchool(school, currentProfile));
+                 if (foundSchool) {
+                   setMySchool(foundSchool);
+                 }
+             }
+         }).catch(err => console.log('Gagal cari data sekolah:', err));
+      }
 
       // 2. Fallback check (Controller)
       const currentUser = AuthController.getCurrentUser();
@@ -56,21 +84,56 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with Gradient */}
       <LinearGradient
         colors={['#3b82f6', '#1d4ed8']} 
         style={styles.header}
       >
         <SafeAreaView>
           <View style={styles.headerContent}>
-            <Text style={styles.greeting}>Hai, {user.name || 'Pengguna'} 👋</Text>
-            <Text style={styles.subGreeting}>Jangan lupa minum vitamin hari ini!</Text>
+            <View style={styles.logoContainer}>
+               <Image 
+                  source={require('../../../assets/images/Logo.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+               />
+            </View>
+            <View>
+                <Text style={styles.greeting}>Hai, {user.name || 'Pengguna'} 👋</Text>
+                <Text style={styles.subGreeting}>Jangan lupa minum vitamin hari ini!</Text>
+            </View>
           </View>
         </SafeAreaView>
       </LinearGradient>
 
       <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 100 }}>
         
+        {/* Lokasi Sekolah Widget */}
+        {mySchool && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Lokasi Sekolah</Text>
+              <Ionicons name="location" size={24} color="#ef4444" />
+            </View>
+            <View style={styles.schoolWidgetContent}>
+               <View style={styles.schoolWidgetIcon}>
+                  <Ionicons name="school" size={22} color="#2563eb" />
+               </View>
+               <View style={{ flex: 1 }}>
+                 <Text style={styles.schoolWidgetName}>{mySchool.nama}</Text>
+                 <Text style={styles.schoolWidgetAddr} numberOfLines={1}>{mySchool.alamat}</Text>
+                 <Text style={styles.schoolWidgetCity}>{mySchool.kota}</Text>
+               </View>
+            </View>
+            <TouchableOpacity 
+              style={styles.schoolWidgetBtn}
+              onPress={() => router.push('/sekolah')}
+            >
+              <Ionicons name="map-outline" size={16} color="white" />
+              <Text style={styles.schoolWidgetBtnText}>Lihat di Peta</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Vitamin Info Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -187,7 +250,23 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 10,
+  },
+  logoContainer: {
+    width: 50,
+    height: 50,
+    backgroundColor: 'white',
+    borderRadius: 25, // Circular
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+    elevation: 2, // Shadow for depth
+  },
+  logo: {
+    width: 35,
+    height: 35,
   },
   greeting: {
     fontSize: 24,
@@ -363,5 +442,62 @@ const styles = StyleSheet.create({
     color: '#16a34a',
     fontSize: 12,
     fontWeight: '600',
+  },
+  envBadge: {
+    position: 'absolute',
+    top: -10,
+    right: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  envText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  schoolWidgetContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  schoolWidgetIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  schoolWidgetName: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  schoolWidgetAddr: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  schoolWidgetCity: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  schoolWidgetBtn: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  schoolWidgetBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

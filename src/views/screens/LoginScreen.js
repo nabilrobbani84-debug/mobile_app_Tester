@@ -12,7 +12,6 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,8 +31,8 @@ const LoginScreen = () => {
   const { login } = useAuth(); 
 
   // State Data
-  const [nisn, setNisn] = useState('');
-  const [idSekolah, setIdSekolah] = useState('');
+  const [nis, setNis] = useState('');
+  const [kodeSekolah, setKodeSekolah] = useState('');
   
   // State UI
   const [isLoading, setIsLoading] = useState(false);
@@ -44,19 +43,27 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     Keyboard.dismiss();
-    if (!nisn || !idSekolah) {
-      Alert.alert('Gagal Masuk', 'Harap isi NISN dan ID Sekolah terlebih dahulu.');
+    const normalizedNis = nis.trim();
+    const normalizedSchoolKey = kodeSekolah.trim().toUpperCase();
+
+    if (!normalizedNis || !normalizedSchoolKey) {
+      Alert.alert('Gagal Masuk', 'Harap isi NIS dan Kode Sekolah terlebih dahulu.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await login({ nisn, schoolId: idSekolah });
+      const response = await login({
+        nis: normalizedNis,
+        nisn: normalizedNis,
+        schoolId: normalizedSchoolKey,
+        schoolCode: normalizedSchoolKey,
+      });
       if (response.success) {
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Login Gagal', response.error || 'NISN atau ID Sekolah salah.');
+        Alert.alert('Login Gagal', response.error || 'NIS atau Kode Sekolah salah.');
       }
     } catch (error) {
       Alert.alert('Error', 'Terjadi kesalahan sistem. Silakan coba lagi.');
@@ -113,16 +120,13 @@ const LoginScreen = () => {
               <View style={styles.welcomeTextContainer}>
                 <Text style={styles.welcomeTitle}>Selamat Datang</Text>
                 <Text style={styles.welcomeSubtitle}>Masuk untuk memantau kesehatanmu</Text>
-                <Text style={{fontSize: 10, color: '#ccc', marginTop: 5, textAlign: 'center'}}>
-                  (Test: 0110222079 / SMPN1JKT)
-                </Text>
               </View>
 
               <View style={styles.formContainer}>
                 
-                {/* INPUT 1: NISN */}
+                {/* INPUT 1: NIS */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>NISN</Text>
+                  <Text style={styles.label}>NIS</Text>
                   <View 
                     style={[
                       styles.inputContainer,
@@ -137,8 +141,8 @@ const LoginScreen = () => {
                       style={styles.textInput}
                       placeholder="Nomor Induk Siswa"
                       placeholderTextColor="#9CA3AF"
-                      value={nisn}
-                      onChangeText={setNisn}
+                      value={nis}
+                      onChangeText={setNis}
                       keyboardType="number-pad"
                       onFocus={() => setIsNisnFocused(true)}
                       onBlur={() => setIsNisnFocused(false)}
@@ -149,9 +153,9 @@ const LoginScreen = () => {
                   </View>
                 </View>
 
-                {/* INPUT 2: ID Sekolah */}
+                {/* INPUT 2: Kode Sekolah */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>ID Sekolah</Text>
+                  <Text style={styles.label}>Kode Sekolah</Text>
                   <View 
                     style={[
                       styles.inputContainer,
@@ -164,10 +168,10 @@ const LoginScreen = () => {
                     <View style={styles.separator} />
                     <TextInput
                       style={styles.textInput}
-                      placeholder="Kode Sekolah"
+                      placeholder="Masukkan kode sekolah"
                       placeholderTextColor="#9CA3AF"
-                      value={idSekolah}
-                      onChangeText={setIdSekolah}
+                      value={kodeSekolah}
+                      onChangeText={(value) => setKodeSekolah(value.toUpperCase())}
                       autoCapitalize="characters"
                       onFocus={() => setIsIdFocused(true)}
                       onBlur={() => setIsIdFocused(false)}
