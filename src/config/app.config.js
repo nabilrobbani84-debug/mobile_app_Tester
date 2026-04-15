@@ -4,6 +4,39 @@
  * Centralized configuration for the entire application
  * @module config/app.config
  */
+import Constants from 'expo-constants';
+
+const expoExtra = Constants.expoConfig?.extra || Constants.manifest2?.extra || {};
+
+const getConfigValue = (...keys) => {
+  for (const key of keys) {
+    const value = process.env[key] ?? expoExtra[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
+const toBoolean = (value, fallback = false) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase();
+    if (normalizedValue === 'true') return true;
+    if (normalizedValue === 'false') return false;
+  }
+
+  return fallback;
+};
+
+const isLocalApiUrl = (url = '') => {
+  if (!url) return true;
+
+  return /\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|0\.0\.0\.0|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)/i.test(url);
+};
+
+const isInstalledApp = !__DEV__;
 
 // Environment configurations
 const environments = {
@@ -13,16 +46,16 @@ const environments = {
     // Android Emulator uses 10.0.2.2 to access host localhost.
     // FastAPI backend berjalan di port 8000.
     // Untuk device fisik, ganti dengan IP lokal PC kamu (misal: http://192.168.x.x:8000/api)
-    apiUrl: process.env.REACT_APP_API_URL || 'http://10.0.2.2:8000/api',
+    apiUrl: getConfigValue('EXPO_PUBLIC_API_URL', 'REACT_APP_API_URL') || 'http://10.0.2.2:8000/api',
     // Mock API dimatikan secara default agar aplikasi langsung menggunakan FastAPI Backend
-    useMockApi: process.env.REACT_APP_USE_MOCK_API === 'true' ? true : false,
+    useMockApi: toBoolean(getConfigValue('EXPO_PUBLIC_USE_MOCK_API', 'REACT_APP_USE_MOCK_API'), false),
     debug: true,
     logLevel: 'debug'
   },
   staging: {
     label: 'Staging',
     badgeColor: '#a855f7', // purple-500
-    apiUrl: process.env.REACT_APP_API_URL || 'https://staging-api.modiva.com/api',
+    apiUrl: getConfigValue('EXPO_PUBLIC_API_URL', 'REACT_APP_API_URL') || 'https://staging-api.modiva.com/api',
     useMockApi: false,
     debug: true,
     logLevel: 'info'
@@ -30,7 +63,7 @@ const environments = {
   production: {
     label: 'Production',
     badgeColor: 'transparent',
-    apiUrl: process.env.REACT_APP_API_URL || 'https://api.modiva.com/api',
+    apiUrl: getConfigValue('EXPO_PUBLIC_API_URL', 'REACT_APP_API_URL') || 'http://192.168.100.104:8000/api', // Point to PC's local IP for physical device
     useMockApi: false,
     debug: false,
     logLevel: 'error'
@@ -39,7 +72,7 @@ const environments = {
 
 // Get current environment
 const getCurrentEnvironment = () => {
-  const env = process.env.REACT_APP_ENV || process.env.NODE_ENV || 'development';
+  const env = getConfigValue('EXPO_PUBLIC_APP_ENV', 'REACT_APP_ENV') || process.env.NODE_ENV || (__DEV__ ? 'development' : 'production');
   
   switch (env) {
     case 'production':
@@ -54,11 +87,22 @@ const getCurrentEnvironment = () => {
 };
 
 const currentEnv = getCurrentEnvironment();
+const resolvedEnvironment = environments[currentEnv];
+const explicitMockApiSetting = getConfigValue('EXPO_PUBLIC_USE_MOCK_API', 'REACT_APP_USE_MOCK_API');
+const shouldForceMockApiForInstalledApp =
+  explicitMockApiSetting === undefined &&
+  isInstalledApp &&
+  isLocalApiUrl(resolvedEnvironment.apiUrl);
+
+const environmentConfig = {
+  ...resolvedEnvironment,
+  useMockApi: resolvedEnvironment.useMockApi
+};
 
 // Main application configuration
 export const AppConfig = {
   // Environment specific settings
-  environment: environments[currentEnv],
+  environment: environmentConfig,
   
   // Current environment name
   currentEnv,
@@ -66,8 +110,8 @@ export const AppConfig = {
   // Application metadata
   app: {
     name: 'Modiva',
-    version: process.env.REACT_APP_VERSION || '1.0.0',
-    buildNumber: process.env.REACT_APP_BUILD_NUMBER || '1'
+    version: getConfigValue('EXPO_PUBLIC_APP_VERSION', 'REACT_APP_VERSION') || '1.0.0',
+    buildNumber: getConfigValue('EXPO_PUBLIC_BUILD_NUMBER', 'REACT_APP_BUILD_NUMBER') || '1'
   },
   
   // Feature flags
@@ -100,7 +144,7 @@ export const AppConfig = {
   // Analytics settings
   analytics: {
     enabled: true,
-    trackingId: process.env.REACT_APP_GA_TRACKING_ID || '',
+    trackingId: getConfigValue('EXPO_PUBLIC_GA_TRACKING_ID', 'REACT_APP_GA_TRACKING_ID') || '',
     sampleRate: 1.0
   },
   

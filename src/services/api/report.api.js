@@ -6,6 +6,13 @@
 import { apiService } from './api.services';
 import { ApiEndpoints, USE_MOCK_API, MOCK_API_DELAY } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
+import { store } from '../../state/store.js';
+import {
+    addMockReportForUser,
+    getMockReportsForUser,
+    getMockStudentByUserId,
+    isRecoverableNetworkError
+} from './mock.database.js';
 /**
  * Mock Report API
  */
@@ -17,16 +24,24 @@ const MockReportAPI = {
         await new Promise(resolve => setTimeout(resolve, MOCK_API_DELAY * 1.5));
         
         Logger.info('🎭 Mock API: Submit Report', reportData);
+
+        const userProfile = store.getState()?.user?.profile || {};
+        const newReport = addMockReportForUser(userProfile, {
+            date: reportData?.date,
+            notes: reportData?.notes,
+            photo: reportData?.photoUri || reportData?.photo || null,
+            photoUrl: reportData?.photoUri || reportData?.photo || null
+        });
         
         return {
             success: true,
             status: 'success',
             message: 'Laporan berhasil dikirim.',
             data: {
-                report_id: 'RPT-' + Date.now(),
-                date: reportData.date,
-                timestamp: new Date().toISOString(),
-                photo_url: 'https://cdn.modiva.app/reports/RPT-' + Date.now() + '.jpg'
+                report_id: newReport.id,
+                date: newReport.date,
+                timestamp: newReport.createdAt,
+                photo_url: newReport.photoUrl
             }
         };
     },
@@ -37,37 +52,41 @@ const MockReportAPI = {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         Logger.info('🎭 Mock API: Get All Reports', params);
+
+        const userProfile = store.getState()?.user?.profile || {};
+        const currentUser = getMockStudentByUserId(userProfile?.id);
+        const reports = getMockReportsForUser(userProfile).map((report) => ({
+            id: report.id,
+            date: report.date,
+            hb_value: report.hbValue ?? report.hb_value ?? currentUser?.hb_last ?? 12.0,
+            status: report.status || 'Selesai',
+            photo_url: report.photoUrl || report.photo_url || null,
+            notes: report.notes || '',
+            created_at: report.createdAt || report.created_at
+        }));
+        const hbTrends = reports
+            .slice()
+            .reverse()
+            .map((report) => Number(report.hb_value || 0))
+            .filter((value) => value > 0);
+        const totalCount = reports.length;
+        const target = Number(userProfile?.totalTarget || currentUser?.total_target || 90) || 90;
+        const consumptionRate = target > 0
+            ? Math.round((totalCount / target) * 100)
+            : 0;
         
         return {
             success: true,
             data: {
-                hb_trends: [11.8, 12.0, 12.2, 12.1, 12.3, 12.5],
-                consumption_rate: 85,
-                total_count: 8,
-                reports: [
-                    {
-                        id: 'RPT-001',
-                        date: '2024-05-15',
-                        hb_value: 12.5,
-                        status: 'Selesai',
-                        photo_url: 'https://cdn.modiva.app/reports/RPT-001.jpg',
-                        notes: 'Diminum setelah makan',
-                        created_at: '2024-05-15T08:30:00Z'
-                    },
-                    {
-                        id: 'RPT-002',
-                        date: '2024-05-14',
-                        hb_value: 12.3,
-                        status: 'Selesai',
-                        photo_url: 'https://cdn.modiva.app/reports/RPT-002.jpg',
-                        created_at: '2024-05-14T08:30:00Z'
-                    }
-                ]
+                hb_trends: hbTrends,
+                consumption_rate: consumptionRate,
+                total_count: totalCount,
+                reports
             },
             meta: {
                 page: params.page || 1,
                 limit: params.limit || 10,
-                total: 8
+                total: totalCount
             }
         };
     }
@@ -87,9 +106,18 @@ export const ReportAPI = {
         }
         
         const endpoint = ApiEndpoints.reports.submit;
-        return await apiService.upload(endpoint.url, reportData, {
-            timeout: endpoint.timeout
-        });
+        try {
+            return await apiService.upload(endpoint.url, reportData, {
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            if (!isRecoverableNetworkError(error)) {
+                throw error;
+            }
+
+            Logger.warn('⚠️ ReportAPI.submit fallback ke Mock API.', error?.message);
+            return await MockReportAPI.submit(reportData);
+        }
     },
     /**
      * Get all reports
@@ -102,10 +130,19 @@ export const ReportAPI = {
         }
         
         const endpoint = ApiEndpoints.reports.getAll;
-        return await apiService.get(endpoint.url, {
-            query: params,
-            timeout: endpoint.timeout
-        });
+        try {
+            return await apiService.get(endpoint.url, {
+                query: params,
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            if (!isRecoverableNetworkError(error)) {
+                throw error;
+            }
+
+            Logger.warn('⚠️ ReportAPI.getAll fallback ke Mock API.', error?.message);
+            return await MockReportAPI.getAll(params);
+        }
     },
     /**
      * Get report by ID

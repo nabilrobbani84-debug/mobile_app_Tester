@@ -8,7 +8,49 @@ import { Logger } from '../../utils/logger.js';
 import { apiService } from './api.services.js';
 
 import { store } from '../../state/store.js';
-import { MOCK_SISWA_DB } from './auth.api.js';
+import {
+    buildMockUserPayload,
+    getMockStudentByUserId,
+    isRecoverableNetworkError,
+    updateMockStudentProfile
+} from './mock.database.js';
+
+const buildActiveProfileFallback = () => {
+    const state = store.getState();
+    const currentProfile = state.user?.profile || {};
+
+    if (currentProfile.id) {
+        return {
+            ...currentProfile,
+            birth_date: currentProfile.birthDate,
+            hb_last: currentProfile.hbLast,
+            consumption_count: currentProfile.consumptionCount,
+            total_target: currentProfile.totalTarget,
+            created_at: currentProfile.createdAt,
+            updated_at: currentProfile.updatedAt || new Date().toISOString()
+        };
+    }
+
+    return {
+        id: null,
+        name: 'Pengguna',
+        nisn: null,
+        school: null,
+        email: null,
+        phone: null,
+        address: null,
+        birth_date: null,
+        gender: null,
+        height: null,
+        weight: null,
+        hb_last: null,
+        consumption_count: 0,
+        total_target: 48,
+        avatar: null,
+        created_at: null,
+        updated_at: new Date().toISOString()
+    };
+};
 
 /*
  * Mock User API
@@ -26,55 +68,27 @@ const MockUserAPI = {
         const currentUserId = state.user?.profile?.id;
         
         // Find in mock DB
-        const user = MOCK_SISWA_DB.find(u => u.id.toString() === currentUserId?.toString());
+        const user = getMockStudentByUserId(currentUserId);
         
         if (user) {
-             return {
+            const profile = buildMockUserPayload(user);
+            return {
                 success: true,
                 data: {
-                    id: user.id.toString(),
-                    name: user.nama,
-                    nisn: user.nis,
-                    school: user.sekolah_nama || `Sekolah ID ${user.sekolah_id}`,
-                    email: user.email,
-                    phone: '081234567890',
-                    address: 'Alamat Siswa',
-                    birth_date: user.tgl_lahir,
-                    gender: user.gender === 'P' ? 'F' : 'M',
-                    height: user.height || 160,
-                    weight: user.weight || 50,
-                    hb_last: user.hb_last || 12.5,
-                    consumption_count: user.consumption_count || 0,
-                    total_target: user.total_target || 90,
-                    avatar: user.avatar || null,
-                    created_at: '2023-10-01T00:00:00Z',
-                    updated_at: new Date().toISOString()
+                    ...profile,
+                    birth_date: profile.birthDate,
+                    hb_last: profile.hbLast,
+                    consumption_count: profile.consumptionCount,
+                    total_target: profile.totalTarget,
+                    created_at: profile.createdAt,
+                    updated_at: profile.updatedAt
                 }
             };
         }
 
-        // Fallback for demo if no login state
         return {
             success: true,
-            data: {
-                id: '20231001',
-                name: 'Aisyah',
-                nisn: '0110222079',
-                school: 'SMPN 1 Jakarta',
-                email: 'aisyah@email.com',
-                phone: '081234567890',
-                address: 'Jakarta Selatan',
-                birth_date: '2008-05-15',
-                gender: 'F',
-                height: 176,
-                weight: 65,
-                hb_last: 12.5,
-                consumption_count: 8,
-                total_target: 48,
-                avatar: null,
-                created_at: '2023-10-01T00:00:00Z',
-                updated_at: new Date().toISOString()
-            }
+            data: buildActiveProfileFallback()
         };
     },
 
@@ -89,21 +103,11 @@ const MockUserAPI = {
         const state = store.getState();
         const currentUserId = state.user?.profile?.id;
         
-        const userIndex = MOCK_SISWA_DB.findIndex(u => u.id.toString() === currentUserId?.toString());
-        
-        if (userIndex !== -1) {
-            // Map frontend fields back to DB fields
-            const dbUser = MOCK_SISWA_DB[userIndex];
-            
-            if (data.name) dbUser.nama = data.name;
-            if (data.school) dbUser.sekolah_nama = data.school; // Update school name
-            if (data.height) dbUser.height = parseFloat(data.height);
-            if (data.weight) dbUser.weight = parseFloat(data.weight);
-            if (data.birthPlace) dbUser.tmp_lahir = data.birthPlace;
-            if (data.avatar) dbUser.avatar = data.avatar; // Update avatar
-            // Add other fields as needed
-            
-            Logger.info('✅ Mock DB Updated:', dbUser);
+        if (currentUserId) {
+            const dbUser = updateMockStudentProfile(currentUserId, data);
+            if (dbUser) {
+                Logger.info('✅ Mock DB Updated:', dbUser);
+            }
         }
 
         return {
@@ -130,9 +134,19 @@ export const UserAPI = {
             return await MockUserAPI.getProfile();
         }
         const endpoint = ApiEndpoints.user.getProfile;
-        return await apiService.get(endpoint.url, {
-            timeout: endpoint.timeout
-        });
+
+        try {
+            return await apiService.get(endpoint.url, {
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            if (!isRecoverableNetworkError(error)) {
+                throw error;
+            }
+
+            Logger.warn('⚠️ UserAPI.getProfile fallback ke Mock API.', error?.message);
+            return await MockUserAPI.getProfile();
+        }
     },
 
     /**
@@ -145,9 +159,19 @@ export const UserAPI = {
             return await MockUserAPI.updateProfile(data);
         }
         const endpoint = ApiEndpoints.user.updateProfile;
-        return await apiService.put(endpoint.url, data, {
-            timeout: endpoint.timeout
-        });
+
+        try {
+            return await apiService.put(endpoint.url, data, {
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            if (!isRecoverableNetworkError(error)) {
+                throw error;
+            }
+
+            Logger.warn('⚠️ UserAPI.updateProfile fallback ke Mock API.', error?.message);
+            return await MockUserAPI.updateProfile(data);
+        }
     }
 };
 

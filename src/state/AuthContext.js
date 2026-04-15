@@ -1,4 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
+import { UserModel } from '../models/User.model';
+import { AuthAPI, createOfflineStudentSession } from '../services/api/auth.api';
+import { UserAPI } from '../services/api/user.api';
+import { ActionTypes, store } from './store';
 // Imports from your storage helper utility
 import {
     clearUserSession,
@@ -70,10 +74,34 @@ const authReducer = (state, action) => {
 
 const AuthContext = createContext(null);
 
-// Mock API removed in favor of services/api/auth.api.js
-import { UserModel } from '../models/User.model';
-import { AuthAPI } from '../services/api/auth.api';
-import { ActionTypes, store } from './store';
+const isNetworkFailure = (message = '') => {
+  const normalizedMessage = String(message).trim().toLowerCase();
+  return (
+    normalizedMessage.includes('network request failed') ||
+    normalizedMessage.includes('gangguan koneksi internet') ||
+    normalizedMessage.includes('waktu permintaan habis') ||
+    normalizedMessage.includes('failed to fetch')
+  );
+};
+
+const syncActiveUserProfile = async (baseUser) => {
+  try {
+    const profileResponse = await UserAPI.getProfile();
+    const profilePayload = profileResponse?.data || profileResponse?.user;
+
+    if (!profilePayload) {
+      return new UserModel(baseUser).toJSON();
+    }
+
+    return new UserModel({
+      ...baseUser,
+      ...profilePayload
+    }).toJSON();
+  } catch (error) {
+    console.warn('Profile sync failed, using login payload:', error?.message || error);
+    return new UserModel(baseUser).toJSON();
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -113,7 +141,19 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     try {
       // Use standard AuthAPI which handles Real/Mock switching based on config
-      const response = await AuthAPI.loginSiswa(credentials);
+      let response;
+
+      try {
+        response = await AuthAPI.loginSiswa(credentials);
+      } catch (error) {
+        const errorMessage = error?.userMessage || error?.message || '';
+        if (!isNetworkFailure(errorMessage)) {
+          throw error;
+        }
+
+        response = await createOfflineStudentSession(credentials);
+        response.offlineFallback = true;
+      }
       
       if (response && (response.success || response.token)) {
         // Normalize response data
@@ -121,7 +161,11 @@ export const AuthProvider = ({ children }) => {
         const rawUser = response.user || response.data?.user;
         
         // Use UserModel to normalize data (handle snake_case or camelCase)
-        const user = new UserModel(rawUser).toJSON();
+        const initialUser = new UserModel(rawUser).toJSON();
+
+        // Keep the active profile aligned with the account that just logged in.
+        store.dispatch(ActionTypes.USER_SET_PROFILE, initialUser);
+        const user = await syncActiveUserProfile(initialUser);
 
         // Save to device storage
         await saveAuthToken(token);
@@ -136,9 +180,12 @@ export const AuthProvider = ({ children }) => {
         store.dispatch(ActionTypes.AUTH_LOGIN, { token });
         store.dispatch(ActionTypes.USER_SET_PROFILE, user);
 
-        return { success: true };
+        return { success: true, offlineFallback: response.offlineFallback === true };
       } else {
-        const errorMessage = response.message || response.error || 'Login gagal';
+        const fallbackMessage = response?.message || response?.error || '';
+        const errorMessage = isNetworkFailure(fallbackMessage)
+          ? 'Koneksi ke server bermasalah dan data login tidak cocok dengan data offline.'
+          : (fallbackMessage || 'Login gagal');
         dispatch({ 
           type: AUTH_ACTIONS.LOGIN_FAILURE, 
           payload: errorMessage
@@ -147,7 +194,10 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.warn("Login Error:", error);
-      const errorMessage = error.userMessage || error.message || 'Terjadi kesalahan jaringan';
+      const rawMessage = error.userMessage || error.message || 'Terjadi kesalahan jaringan';
+      const errorMessage = isNetworkFailure(rawMessage)
+        ? 'Koneksi ke server gagal. Gunakan NIS yang terdaftar atau kode sekolah yang sesuai untuk masuk offline.'
+        : rawMessage;
       dispatch({ 
         type: AUTH_ACTIONS.LOGIN_FAILURE, 
         payload: errorMessage 

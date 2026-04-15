@@ -30,8 +30,15 @@ export const ReportController = {
         Logger.info('📤 ReportController: Submitting report');
 
         try {
+            const normalizedPhoto = typeof reportData.photo === 'string'
+                ? { uri: reportData.photo, name: 'vitamin-photo.jpg', type: 'image/jpeg' }
+                : reportData.photo;
+
             // Validate report data
-            const report = new ReportModel(reportData);
+            const report = new ReportModel({
+                ...reportData,
+                photo: normalizedPhoto || reportData.photoUri || null
+            });
             const validation = report.validate();
 
             if (!validation.valid) {
@@ -43,26 +50,34 @@ export const ReportController = {
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'submitReport', isLoading: true });
 
             // Validate image
-            if (reportData.photo) {
-                await this.validateImage(reportData.photo);
+            if (normalizedPhoto) {
+                await this.validateImage(normalizedPhoto);
             }
 
             // Compress image
-            let compressedImage = reportData.photo;
-            if (reportData.photo) {
+            let compressedImage = normalizedPhoto;
+            if (normalizedPhoto) {
                 Logger.info('🗜️ Compressing image...');
-                compressedImage = await this.compressImage(reportData.photo);
+                compressedImage = await this.compressImage(normalizedPhoto);
             }
 
             // Create FormData
             const formData = new FormData();
             formData.append('date', reportData.date);
             if (compressedImage) {
-                formData.append('photo', compressedImage, 'vitamin-photo.jpg');
+                if (compressedImage?.uri) {
+                    formData.append('photo', compressedImage);
+                } else {
+                    formData.append('photo', compressedImage, 'vitamin-photo.jpg');
+                }
             }
             if (reportData.notes) {
                 formData.append('notes', reportData.notes);
             }
+
+            formData.date = reportData.date;
+            formData.notes = reportData.notes || '';
+            formData.photoUri = compressedImage?.uri || reportData.photo || null;
 
             // Submit to API
             const response = await ReportAPI.submit(formData);
@@ -73,16 +88,22 @@ export const ReportController = {
                 // Create new report model
                 const newReport = new ReportModel({
                     id: response.data.report_id,
+                    userId: store.getState()?.user?.profile?.id,
                     date: reportData.date,
-                    photoUrl: response.data.photo_url,
+                    photoUrl: response.data.photo_url || compressedImage?.uri || null,
                     notes: reportData.notes,
-                    status: 'pending',
-                    createdAt: response.data.timestamp
+                    hbValue: store.getState()?.user?.profile?.hbLast || null,
+                    status: 'Selesai',
+                    createdAt: response.data.timestamp,
+                    timestamp: new Date(response.data.timestamp || Date.now()).getTime()
                 });
 
                 // Update state
                 store.dispatch(ActionTypes.REPORT_ADD, newReport.toJSON());
                 store.dispatch(ActionTypes.USER_INCREMENT_CONSUMPTION);
+                store.dispatch(ActionTypes.USER_UPDATE_PROFILE, {
+                    consumptionCount: (store.getState()?.user?.profile?.consumptionCount || 0) + 1
+                });
 
                 // Clear cache
                 localStorageService.clearReportsCache();
@@ -139,6 +160,9 @@ export const ReportController = {
      */
     async validateImage(file) {
         try {
+            if (file?.uri) {
+                return;
+            }
             await imageValidator.validate(file, {
                 validateDimensions: false,
                 validateFileName: false
@@ -156,6 +180,9 @@ export const ReportController = {
      */
     async compressImage(file) {
         try {
+            if (file?.uri) {
+                return file;
+            }
             const startTime = Date.now();
             
             const compressed = await imageCompressor.compress(file, {

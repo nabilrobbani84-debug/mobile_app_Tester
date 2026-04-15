@@ -108,7 +108,12 @@ export const ErrorInterceptors = {
     }
     
     // Network error
-    if (error.message === 'Failed to fetch') {
+    if (
+      error.message === 'Failed to fetch' ||
+      error.message === 'Network request failed' ||
+      error.message === 'Network Error' ||
+      error.name === 'TypeError'
+    ) {
       error.message = ApiErrorMessages.NETWORK_ERROR;
       error.code = 'NETWORK_ERROR';
     }

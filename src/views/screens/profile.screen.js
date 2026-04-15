@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker'; // Added ImagePicker
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -18,16 +18,63 @@ import {
     View
 } from 'react-native';
 
+import { AuthController } from '../../controllers/auth.controller';
+import { UserModel } from '../../models/User.model';
 import { UserAPI } from '../../services/api/user.api'; // Import UserAPI
+import { useAuth } from '../../state/AuthContext';
 import { ActionTypes, store } from '../../state/store';
+import { saveUserData } from '../../utils/helpers/storageHelpers';
+import { Logger } from '../../utils/logger.js';
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const { logout: logoutSession } = useAuth();
   
   // State untuk Data User - Ambil dari Global Store
   const [user, setUser] = useState(store.getState().user.profile || {});
 
-  // ... (existing code for useFocusEffect) ...
+  useFocusEffect(
+    React.useCallback(() => {
+      let isMounted = true;
+
+      const syncUser = () => {
+        if (!isMounted) return;
+        setUser(store.getState().user.profile || {});
+      };
+
+      syncUser();
+      const refreshProfile = async () => {
+        try {
+          const response = await UserAPI.getProfile();
+          const profilePayload = response?.data || response?.user;
+
+          if (!profilePayload) return;
+
+          const mergedProfile = new UserModel({
+            ...store.getState().user.profile,
+            ...profilePayload,
+          }).toJSON();
+
+          store.dispatch(ActionTypes.USER_SET_PROFILE, mergedProfile);
+          await saveUserData(mergedProfile);
+
+          if (isMounted) {
+            setUser(mergedProfile);
+          }
+        } catch (error) {
+          Logger.warn('Gagal me-refresh profil aktif.', error?.message || error);
+        }
+      };
+
+      refreshProfile();
+      const unsubscribe = store.subscribe(() => syncUser());
+
+      return () => {
+        isMounted = false;
+        unsubscribe();
+      };
+    }, [])
+  );
 
   const handlePickAvatar = async () => {
     try {
@@ -51,11 +98,12 @@ const ProfileScreen = () => {
         const newAvatarUri = result.assets[0].uri;
         
         // 3. Update Local User State
-        const updatedUser = { ...user, avatar: newAvatarUri };
+        const updatedUser = new UserModel({ ...user, avatar: newAvatarUri }).toJSON();
         setUser(updatedUser);
 
         // 4. Update Global Store & Persist
-        store.dispatch(ActionTypes.USER_UPDATE_PROFILE, { avatar: newAvatarUri });
+        store.dispatch(ActionTypes.USER_SET_PROFILE, updatedUser);
+        await saveUserData(updatedUser);
         
         // 5. Save to Storage via API
         try {
@@ -95,10 +143,15 @@ const ProfileScreen = () => {
         const response = await UserAPI.updateProfile(editData);
         
         if (response.success) {
-            setUser(editData); // Simpan data baru
-            
-            // Update Global Store
-            store.dispatch(ActionTypes.USER_UPDATE_PROFILE, editData);
+            const mergedProfile = new UserModel({
+              ...store.getState().user.profile,
+              ...editData,
+              ...(response.data || {}),
+            }).toJSON();
+
+            setUser(mergedProfile);
+            store.dispatch(ActionTypes.USER_SET_PROFILE, mergedProfile);
+            await saveUserData(mergedProfile);
     
             setModalVisible(false); // Tutup modal
             Alert.alert("Sukses", "Profil berhasil diperbarui!");
@@ -120,7 +173,14 @@ const ProfileScreen = () => {
         { 
           text: "Keluar", 
           style: "destructive", 
-          onPress: () => router.replace('/login') 
+          onPress: async () => {
+            try {
+              await AuthController.logout();
+              await logoutSession();
+            } finally {
+              router.replace('/login');
+            }
+          }
         }
       ]
     );

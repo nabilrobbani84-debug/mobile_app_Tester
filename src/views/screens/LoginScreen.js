@@ -46,8 +46,13 @@ const LoginScreen = () => {
     const normalizedNis = nis.trim();
     const normalizedSchoolKey = kodeSekolah.trim().toUpperCase();
 
-    if (!normalizedNis || !normalizedSchoolKey) {
-      Alert.alert('Gagal Masuk', 'Harap isi NIS dan Kode Sekolah terlebih dahulu.');
+    if (!normalizedNis) {
+      Alert.alert('Gagal Masuk', 'Harap isi NIS terlebih dahulu.');
+      return;
+    }
+
+    if (!normalizedSchoolKey) {
+      Alert.alert('Gagal Masuk', 'Harap isi Kode Sekolah terlebih dahulu.');
       return;
     }
 
@@ -63,7 +68,7 @@ const LoginScreen = () => {
       if (response.success) {
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Login Gagal', response.error || 'NIS atau Kode Sekolah salah.');
+        Alert.alert('Login Gagal', response.error || 'NIS atau Kode Sekolah tidak sesuai.');
       }
     } catch (error) {
       Alert.alert('Error', 'Terjadi kesalahan sistem. Silakan coba lagi.');
@@ -168,7 +173,7 @@ const LoginScreen = () => {
                     <View style={styles.separator} />
                     <TextInput
                       style={styles.textInput}
-                      placeholder="Masukkan kode sekolah"
+                      placeholder="Kode Sekolah"
                       placeholderTextColor="#9CA3AF"
                       value={kodeSekolah}
                       onChangeText={(value) => setKodeSekolah(value.toUpperCase())}
@@ -376,7 +381,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#9CA3AF',
     fontSize: 14,
-  }
+  },
 });
 
 export default LoginScreen;

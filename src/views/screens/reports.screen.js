@@ -37,6 +37,18 @@ const COLORS = {
   border: '#E5E7EB',
 };
 
+const formatReportDate = (value) => {
+  const parsedDate = value ? new Date(value) : null;
+  if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
+    return { day: '--', month: '---' };
+  }
+
+  return {
+    day: String(parsedDate.getDate()).padStart(2, '0'),
+    month: parsedDate.toLocaleDateString('id-ID', { month: 'short' })
+  };
+};
+
 const ReportsScreen = () => {
   const router = useRouter();
   
@@ -54,7 +66,7 @@ const ReportsScreen = () => {
       const state = store.getState();
       
       setUserInfo(state.user.profile || { name: 'Siswa', nisn: '-' });
-      setCurrentHB(state.user.hemoglobin?.current || '-');
+      setCurrentHB(state.user.hemoglobin?.current || state.user.profile?.hbLast || '-');
       setReports(state.reports.list || []);
     } catch (error) {
       console.error('Failed to load reports:', error);
@@ -84,8 +96,8 @@ const ReportsScreen = () => {
       // 1. Format Data untuk Excel
       const dataToExport = reports.map((item) => ({
         'Tanggal Pemeriksaan': item.date || '-',
-        'Nilai HB (g/dL)': item.hb_value || 0,
-        'Status': getStatusText(item.hb_value),
+        'Nilai HB (g/dL)': item.hb_value || item.hbValue || 0,
+        'Status': getStatusText(item.hb_value || item.hbValue),
         'Catatan': item.notes || '-'
       }));
 
@@ -252,12 +264,16 @@ const ReportsScreen = () => {
           </View>
         ) : (
           <View style={styles.listContainer}>
-            {reports.map((report, index) => (
+            {reports.map((report, index) => {
+              const formattedDate = formatReportDate(report.date);
+              const hbValue = report.hb_value || report.hbValue;
+
+              return (
               <View key={index} style={styles.reportItem}>
                 {/* Tanggal Box */}
                 <View style={styles.dateBox}>
-                  <Text style={styles.dateDay}>{report.date?.split(' ')[0] || '01'}</Text>
-                  <Text style={styles.dateMonth}>{report.date?.split(' ')[1] || 'Jan'}</Text>
+                  <Text style={styles.dateDay}>{formattedDate.day}</Text>
+                  <Text style={styles.dateMonth}>{formattedDate.month}</Text>
                 </View>
                 
                 {/* Detail */}
@@ -270,13 +286,14 @@ const ReportsScreen = () => {
 
                 {/* Nilai HB */}
                 <View style={styles.reportValueBox}>
-                  <Text style={[styles.reportValue, { color: getStatusColor(report.hb_value) }]}>
-                    {report.hb_value}
+                  <Text style={[styles.reportValue, { color: getStatusColor(hbValue) }]}>
+                    {hbValue ?? '-'}
                   </Text>
                   <Text style={styles.reportUnit}>g/dL</Text>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
         )}
         

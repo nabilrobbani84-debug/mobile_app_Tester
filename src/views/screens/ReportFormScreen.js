@@ -3,7 +3,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ReportController } from '../../controllers/report.controller';
 
   export default function ReportFormScreen() {
     const router = useRouter();
@@ -25,10 +26,23 @@ import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
       }
     };
 
-    const handleSubmit = () => {
-      // Logika simpan data bisa ditambahkan di sini (misal: panggil Controller)
-      alert('Laporan berhasil dikirim!');
-      router.back(); 
+    const handleSubmit = async () => {
+      if (!image) {
+        Alert.alert('Data belum lengkap', 'Silakan pilih foto bukti minum vitamin terlebih dahulu.');
+        return;
+      }
+
+      try {
+        await ReportController.submitReport({
+          date,
+          notes,
+          photo: image,
+        });
+        Alert.alert('Berhasil', 'Laporan berhasil dikirim.');
+        router.back();
+      } catch (error) {
+        Alert.alert('Gagal', error?.message || 'Laporan belum berhasil dikirim.');
+      }
     };
 
     return (

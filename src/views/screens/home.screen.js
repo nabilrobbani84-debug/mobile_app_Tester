@@ -4,9 +4,9 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import AppConfig from '../../config/app.config';
 import { COLORS } from '../../config/theme';
 import { AuthController } from '../../controllers/auth.controller';
+import { DashboardController } from '../../controllers/dashboard.controller';
 import { store } from '../../state/store';
 import { SchoolAPI } from '../../services/api/school.api';
 
@@ -17,9 +17,9 @@ export default function HomeScreen() {
   };
 
   // State for User Data & Reports
-  const [user, setUser] = useState(store.getState().user.profile || {});
+  const [user, setUser] = useState(store.getState()?.user?.profile || {});
   // Ambil 5 report terakhir untuk di home
-  const [reports, setReports] = useState(store.getState().reports.list.slice(0, 5) || []);
+  const [reports, setReports] = useState((store.getState()?.reports?.list || []).slice(0, 5));
   const [mySchool, setMySchool] = useState(null);
 
   // Refresh data when screen focuses
@@ -39,6 +39,9 @@ export default function HomeScreen() {
 
       // 1. Initial Get
       updateState();
+      DashboardController.loadDashboardData().catch((error) => {
+        console.log('Gagal memuat dashboard:', error);
+      });
 
       // Fetch School Data
       const currentProfile = store.getState().user.profile;
@@ -216,8 +219,8 @@ export default function HomeScreen() {
                         {new Date(item.date || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </Text>
                     {/* Jika ada nilai HB di report, tampilkan. Jika tidak, hide atau tampilkan default */}
-                    {item.hb ? (
-                        <Text style={styles.historyHb}>Nilai HB: {item.hb} g/dL</Text>
+                    {(item.hb || item.hbValue || item.hb_value) ? (
+                        <Text style={styles.historyHb}>Nilai HB: {item.hb || item.hbValue || item.hb_value} g/dL</Text>
                     ) : (
                         <Text style={styles.historyHb}>Konsumsi Vitamin</Text>
                     )}

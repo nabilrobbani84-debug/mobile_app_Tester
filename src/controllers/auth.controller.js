@@ -8,6 +8,7 @@ import { analyticsService, EventTypes } from '../services/analytics/analytics.se
 import { AuthAPI } from '../services/api/auth.api.js';
 import { localStorageService } from '../services/storage/local.storage.js';
 import { ActionTypes, store } from '../state/store.js';
+import { clearRememberMe, clearReportsCache, clearUserSession } from '../utils/helpers/storageHelpers.js';
 import { Logger } from '../utils/logger.js';
 /**
  * Authentication Controller
@@ -110,9 +111,12 @@ export const AuthController = {
             // Track analytics
             analyticsService.trackEvent(EventTypes.USER_LOGOUT);
             // Clear state
-            store.dispatch(ActionTypes.AUTH_LOGOUT);
+            store.dispatch(ActionTypes.APP_RESET);
             // Clear storage
             localStorageService.clearAppData();
+            await clearUserSession();
+            await clearReportsCache();
+            await clearRememberMe();
             Logger.success('✅ Logout successful');
             // Show success message
             store.dispatch(ActionTypes.UI_SHOW_TOAST, {

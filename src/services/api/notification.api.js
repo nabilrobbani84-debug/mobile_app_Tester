@@ -6,6 +6,8 @@
 import { ApiEndpoints, USE_MOCK_API } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
 import { apiService } from './api.services.js';
+import { store } from '../../state/store.js';
+import { getMockNotificationsForUser, isRecoverableNetworkError } from './mock.database.js';
 /**
  * Mock Notification API
  */
@@ -17,58 +19,19 @@ const MockNotificationAPI = {
         await new Promise(resolve => setTimeout(resolve, 300));
         
         Logger.info('🎭 Mock API: Get All Notifications', params);
+
+        const userProfile = store.getState()?.user?.profile || {};
+        const notifications = getMockNotificationsForUser(userProfile).map((item) => ({
+            ...item,
+            time: item.time || null
+        }));
         
         return {
             success: true,
-            data: [
-                {
-                    id: 1,
-                    type: 'reminder',
-                    title: 'Pengingat Minum Vitamin',
-                    message: 'Jangan lupa minum vitamin hari ini!',
-                    time: '2 jam yang lalu',
-                    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                    read: false,
-                    icon: 'bell',
-                    color: 'blue'
-                },
-                {
-                    id: 2,
-                    type: 'success',
-                    title: 'Laporan Berhasil Dikirim',
-                    message: 'Laporan konsumsi vitamin Anda telah berhasil dicatat.',
-                    time: '5 jam yang lalu',
-                    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-                    read: true,
-                    icon: 'check',
-                    color: 'green'
-                },
-                {
-                    id: 3,
-                    type: 'motivation',
-                    title: 'Motivasi',
-                    message: 'Hebat! Kamu sudah konsisten minum vitamin selama 7 hari berturut-turut!',
-                    time: '1 hari yang lalu',
-                    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-                    read: false,
-                    icon: 'thumbs-up',
-                    color: 'purple'
-                },
-                {
-                    id: 4,
-                    type: 'info',
-                    title: 'Tips Kesehatan',
-                    message: 'Tahukah kamu? Vitamin D membantu penyerapan kalsium untuk tulang yang kuat.',
-                    time: '2 hari yang lalu',
-                    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                    read: true,
-                    icon: 'info',
-                    color: 'yellow'
-                }
-            ],
+            data: notifications,
             meta: {
-                total: 4,
-                unread: 2
+                total: notifications.length,
+                unread: notifications.filter((item) => !item.read).length
             }
         };
     },
@@ -117,10 +80,19 @@ export const NotificationAPI = {
         }
         
         const endpoint = ApiEndpoints.notifications.getAll;
-        return await apiService.get(endpoint.url, {
-            query: params,
-            timeout: endpoint.timeout
-        });
+        try {
+            return await apiService.get(endpoint.url, {
+                query: params,
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            if (!isRecoverableNetworkError(error)) {
+                throw error;
+            }
+
+            Logger.warn('⚠️ NotificationAPI.getAll fallback ke Mock API.', error?.message);
+            return await MockNotificationAPI.getAll(params);
+        }
     },
     /**
      * Mark notification as read
@@ -133,10 +105,18 @@ export const NotificationAPI = {
         }
         
         const endpoint = ApiEndpoints.notifications.markAsRead;
-        return await apiService.put(endpoint.url, {}, {
-            params: { id },
-            timeout: endpoint.timeout
-        });
+        try {
+            return await apiService.put(endpoint.url, {}, {
+                params: { id },
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            if (!isRecoverableNetworkError(error)) {
+                throw error;
+            }
+
+            return await MockNotificationAPI.markAsRead(id);
+        }
     },
 
     /**
