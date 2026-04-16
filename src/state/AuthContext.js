@@ -126,10 +126,12 @@ export const AuthProvider = ({ children }) => {
           store.dispatch(ActionTypes.AUTH_LOGIN, { token: storedToken });
           store.dispatch(ActionTypes.USER_SET_PROFILE, userStart);
         } else {
+          store.dispatch(ActionTypes.APP_RESET);
           dispatch({ type: AUTH_ACTIONS.STOP_LOADING });
         }
       } catch (e) {
         console.error('Restore session failed:', e);
+        store.dispatch(ActionTypes.APP_RESET);
         dispatch({ type: AUTH_ACTIONS.STOP_LOADING });
       }
     };
@@ -209,6 +211,7 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       await clearUserSession(); // Clear from device storage
+      store.dispatch(ActionTypes.APP_RESET);
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     } catch (error) {
       console.error('Logout failed:', error);

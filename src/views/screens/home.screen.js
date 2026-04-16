@@ -7,8 +7,10 @@ import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, Vi
 import { COLORS } from '../../config/theme';
 import { AuthController } from '../../controllers/auth.controller';
 import { DashboardController } from '../../controllers/dashboard.controller';
+import HBTrendNativeChart from '../components/charts/hb-trend.native';
 import { store } from '../../state/store';
 import { SchoolAPI } from '../../services/api/school.api';
+import { buildHemoglobinTrendPoints, getLatestHemoglobinLabel, getLatestHemoglobinValue } from '../../utils/helpers/hemoglobinHelpers';
 
 export default function HomeScreen() {
   const matchesUserSchool = (school, profile) => {
@@ -84,6 +86,13 @@ export default function HomeScreen() {
   const hbValue = user.hbLast || user.hb || 0; // Support both naming conventions
   
   const percentage = totalTarget > 0 ? Math.round((consumptionCount / totalTarget) * 100) : 0;
+  const hbTrendPoints = buildHemoglobinTrendPoints(reports, {
+    userId: user.id,
+    fallbackValue: hbValue,
+    fallbackDate: user.updatedAt || Date.now()
+  });
+  const latestHBLabel = getLatestHemoglobinLabel(hbTrendPoints);
+  const displayHBValue = getLatestHemoglobinValue(hbTrendPoints, hbValue) ?? 0;
 
   return (
     <View style={styles.container}>
@@ -170,20 +179,17 @@ export default function HomeScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Tren Hemoglobin</Text>
-            <Text style={styles.weekLabel}>Terakhir Diperbarui</Text>
+            <Text style={styles.weekLabel}>{latestHBLabel}</Text>
           </View>
           <View style={styles.hbRow}>
-            <Text style={styles.hbValue}>{hbValue}</Text>
+            <Text style={styles.hbValue}>{displayHBValue}</Text>
             <Text style={styles.hbUnit}>g/dL</Text>
           </View>
-          {/* Chart Placeholder */}
           <View style={styles.chartPlaceholder}>
-            <View style={{height: 100, width: '100%', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between'}}>
-                {[40, 50, 60, 55, 70, 80, 80].map((h, i) => (
-                    <View key={i} style={{width: 30, height: h, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderRadius: 4}} />
-                ))}
-            </View>
-            <Text style={{textAlign: 'center', color: '#999', marginTop: 10, fontSize: 12}}>Visualisasi Grafik HB</Text>
+            <HBTrendNativeChart
+              points={hbTrendPoints}
+              emptyMessage="Grafik HB akan muncul otomatis setelah akun ini memiliki data pemeriksaan."
+            />
           </View>
         </View>
 
@@ -384,7 +390,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   chartPlaceholder: {
-    height: 150,
+    minHeight: 150,
     backgroundColor: '#f9fafb',
     borderRadius: 12,
     justifyContent: 'center',

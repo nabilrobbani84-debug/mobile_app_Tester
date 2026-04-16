@@ -9,6 +9,7 @@ import { ReportAPI } from '../services/api/report.api.js';
 import { UserAPI } from '../services/api/user.api.js';
 import { localStorageService } from '../services/storage/local.storage.js';
 import { ActionTypes, store } from '../state/store.js';
+import { buildHemoglobinTrendPoints, getLatestHemoglobinValue, normalizeReportsForCurrentUser } from '../utils/helpers/hemoglobinHelpers.js';
 import { Logger } from '../utils/logger.js';
 
 /**
@@ -63,12 +64,14 @@ export const DashboardController = {
      */
     async loadRecentReports() {
         try {
+            const userId = store.getState()?.user?.profile?.id || 'global';
             // Check cache first
-            const cachedReports = await localStorageService.getReportsCache(); // Added await just in case
+            const cachedReports = await localStorageService.getReportsCache(userId); // Added await just in case
             
             if (cachedReports && Array.isArray(cachedReports) && cachedReports.length > 0) {
                 Logger.info('📦 Using cached reports');
                 store.dispatch(ActionTypes.REPORT_SET_LIST, cachedReports);
+                this.updateHBTrends(cachedReports);
                 // Return explicitly to stop execution, but don't prevent fetching fresh data if needed
                 // If you want "stale-while-revalidate" strategy, remove the return
                 return; 
@@ -79,18 +82,19 @@ export const DashboardController = {
 
             // FIX: Added safer check for response.data
             if (response && response.success && response.data) {
-                const reports = response.data.reports || [];
+                const reports = normalizeReportsForCurrentUser(
+                    response.data.reports || [],
+                    userId
+                ).sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
 
                 // Update state
                 store.dispatch(ActionTypes.REPORT_SET_LIST, reports);
 
                 // Cache reports
-                localStorageService.setReportsCache(reports);
+                localStorageService.setReportsCache(reports, userId);
 
                 // Update HB trends if available
-                if (response.data.hb_trends) {
-                    this.updateHBTrends(response.data.hb_trends);
-                }
+                this.updateHBTrends(response.data.hb_trends || reports);
 
                 Logger.info(`✅ Loaded ${reports.length} reports`);
             } else {
@@ -133,23 +137,36 @@ export const DashboardController = {
      */
     updateHBTrends(trendsData) {
         try {
-            if (!Array.isArray(trendsData) || trendsData.length === 0) {
+            const userId = store.getState()?.user?.profile?.id || 'global';
+            const currentProfile = store.getState()?.user?.profile || {};
+            const trendPoints = buildHemoglobinTrendPoints(
+                Array.isArray(trendsData) ? trendsData : [],
+                {
+                    userId,
+                    fallbackValue: currentProfile?.hbLast || currentProfile?.hb || null,
+                    fallbackDate: currentProfile?.updatedAt || Date.now()
+                }
+            );
+
+            if (trendPoints.length === 0) {
                 return;
             }
 
-            // Get latest HB value
-            const latestHB = trendsData[trendsData.length - 1];
+            const latestHB = getLatestHemoglobinValue(trendPoints);
 
-            // Update user HB
-            store.dispatch(ActionTypes.USER_UPDATE_HB, latestHB);
+            if (latestHB != null) {
+                store.dispatch(ActionTypes.USER_UPDATE_HB, latestHB);
+                store.dispatch(ActionTypes.USER_UPDATE_PROFILE, {
+                    hbLast: latestHB,
+                    hb: latestHB
+                });
+            }
 
-            // Cache trends
-            // FIX: Generate dynamic labels instead of hardcoded ['Nov', 'Des', ...]
-            // Or ensure trendsData matches the structure expected by the chart
             localStorageService.setHBTrendsCache({
-                labels: trendsData.map((_, i) => `Data ${i + 1}`), // Fallback labels
-                data: trendsData
-            });
+                labels: trendPoints.map((point) => point.label),
+                data: trendPoints.map((point) => point.value),
+                points: trendPoints
+            }, userId);
 
             Logger.info('✅ HB trends updated');
 

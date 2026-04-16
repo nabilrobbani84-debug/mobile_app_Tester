@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker'; // Added ImagePicker
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Image, // Added Image
@@ -28,13 +28,24 @@ import { Logger } from '../../utils/logger.js';
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const { logout: logoutSession } = useAuth();
+  const { isAuthenticated, logout: logoutSession } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // State untuk Data User - Ambil dari Global Store
   const [user, setUser] = useState(store.getState().user.profile || {});
 
+  useEffect(() => {
+    if (!isAuthenticated && !isLoggingOut) {
+      router.replace('/');
+    }
+  }, [isAuthenticated, isLoggingOut, router]);
+
   useFocusEffect(
     React.useCallback(() => {
+      if (!isAuthenticated || isLoggingOut) {
+        return undefined;
+      }
+
       let isMounted = true;
 
       const syncUser = () => {
@@ -73,7 +84,7 @@ const ProfileScreen = () => {
         isMounted = false;
         unsubscribe();
       };
-    }, [])
+    }, [isAuthenticated, isLoggingOut])
   );
 
   const handlePickAvatar = async () => {
@@ -165,20 +176,29 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = () => {
+    if (isLoggingOut) {
+      return;
+    }
+
     Alert.alert(
       "Keluar", 
-      "Apakah Anda yakin ingin keluar?",
+      "Apakah Anda yakin ingin keluar? Anda akan diminta login ulang saat membuka aplikasi lagi.",
       [
         { text: "Batal", style: "cancel" },
         { 
           text: "Keluar", 
           style: "destructive", 
           onPress: async () => {
+            setIsLoggingOut(true);
             try {
               await AuthController.logout();
               await logoutSession();
+              router.replace('/');
+            } catch (error) {
+              console.error('Logout gagal:', error);
+              Alert.alert("Error", "Gagal keluar dari akun. Silakan coba lagi.");
             } finally {
-              router.replace('/login');
+              setIsLoggingOut(false);
             }
           }
         }
@@ -269,7 +289,7 @@ const ProfileScreen = () => {
           <View style={styles.menuContainer}>
              <MenuItem 
                 icon="log-out-outline" 
-                label="Keluar Aplikasi" 
+                label={isLoggingOut ? "Sedang Keluar..." : "Keluar Aplikasi"} 
                 onPress={handleLogout} 
                 isDestructive 
              />

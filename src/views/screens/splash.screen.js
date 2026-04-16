@@ -121,19 +121,17 @@ const SplashScreen = ({ onAnimationComplete }) => {
               { width: CARD_WIDTH, height: CARD_HEIGHT }
             ]}
           >
-            {/* Gradient Background */}
             <LinearGradient
-              colors={['#DBDEE4', '#F5F6F8']} // Warna Silver Halus
+              colors={['#DBDEE4', '#F5F6F8']}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={styles.cardGradient}
             >
-              {/* Inner Border Effect */}
               <View style={styles.cardInnerBorder}>
                 <Image
-                  source={require('../../../assets/images/capsul.png')} //
+                  source={require('../../../assets/images/capsul.png')}
                   style={{
-                    width: CARD_WIDTH * 0.65, // Ukuran gambar di dalam kartu
+                    width: CARD_WIDTH * 0.65,
                     height: CARD_HEIGHT * 0.75,
                   }}
                   resizeMode="contain"
@@ -231,19 +229,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  /* CARD STYLES */
   cardContainer: {
-    // Shadow Props
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
-    
-    // Android Elevation Fix: Background color wajib ada agar elevation muncul
-    backgroundColor: '#DBDEE4', 
+    backgroundColor: '#DBDEE4',
     elevation: 10,
-    
-    borderRadius: 4, // Radius kecil sesuai desain "kotak" tapi tidak tajam
+    borderRadius: 4,
   },
   cardGradient: {
     flex: 1,
@@ -258,7 +251,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)', // Efek border putih halus (depth)
+    borderColor: 'rgba(255,255,255,0.6)',
     borderRadius: 4,
   },
 

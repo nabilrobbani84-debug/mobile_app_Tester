@@ -1,4 +1,4 @@
-package com.anonymous.tester_mobile
+package com.modiva.mobile
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

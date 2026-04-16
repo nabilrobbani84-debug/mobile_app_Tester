@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "testermobile",
+    "scheme": "modiva",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -19,7 +19,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.tester_mobile"
+      "usesCleartextTraffic": true,
+      "package": "com.modiva.mobile"
     },
     "web": {
       "output": "static",
@@ -27,6 +28,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#2563EB",
+          "defaultChannel": "daily-reminders"
+        }
+      ],
       [
         "expo-splash-screen",
         {

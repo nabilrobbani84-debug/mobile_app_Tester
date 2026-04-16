@@ -168,10 +168,10 @@ export const ErrorInterceptors = {
       try {
         // Dispatch event for auth layer to handle
         const { store, ActionTypes } = require('../../state/store.js');
-        store.dispatch({ type: ActionTypes.AUTH_LOGOUT });
-        store.dispatch({ 
-          type: ActionTypes.UI_SHOW_TOAST, 
-          payload: { type: 'error', message: 'Sesi anda telah berakhir, mohon login kembali.' } 
+        store.dispatch(ActionTypes.AUTH_LOGOUT);
+        store.dispatch(ActionTypes.UI_SHOW_TOAST, {
+          type: 'error',
+          message: 'Sesi anda telah berakhir, mohon login kembali.'
         });
         
         let router;

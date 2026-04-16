@@ -23,6 +23,8 @@ import XLSX from 'xlsx';
 // --- Import Controller & Store ---
 import { ReportController } from '../../controllers/report.controller';
 import { store } from '../../state/store';
+import { buildHemoglobinTrendPoints, getLatestHemoglobinLabel, getLatestHemoglobinValue } from '../../utils/helpers/hemoglobinHelpers';
+import HBTrendNativeChart from '../components/charts/hb-trend.native';
 
 // --- Theme Colors ---
 const COLORS = {
@@ -66,8 +68,14 @@ const ReportsScreen = () => {
       const state = store.getState();
       
       setUserInfo(state.user.profile || { name: 'Siswa', nisn: '-' });
-      setCurrentHB(state.user.hemoglobin?.current || state.user.profile?.hbLast || '-');
-      setReports(state.reports.list || []);
+      const reportList = state.reports.list || [];
+      const trendPoints = buildHemoglobinTrendPoints(reportList, {
+        userId: state.user.profile?.id,
+        fallbackValue: state.user.hemoglobin?.current || state.user.profile?.hbLast || null,
+        fallbackDate: state.user.profile?.updatedAt || Date.now()
+      });
+      setCurrentHB(getLatestHemoglobinValue(trendPoints, state.user.hemoglobin?.current || state.user.profile?.hbLast || null) ?? '-');
+      setReports(reportList);
     } catch (error) {
       console.error('Failed to load reports:', error);
     } finally {
@@ -84,6 +92,12 @@ const ReportsScreen = () => {
     setRefreshing(true);
     loadData();
   }, []);
+
+  const hbTrendPoints = buildHemoglobinTrendPoints(reports, {
+    userId: userInfo.id,
+    fallbackValue: currentHB === '-' ? null : currentHB
+  });
+  const latestHBLabel = getLatestHemoglobinLabel(hbTrendPoints);
 
   // --- Logic Download Excel ---
   const handleDownloadExcel = async () => {
@@ -212,7 +226,7 @@ const ReportsScreen = () => {
           <View style={styles.heroHeader}>
             <View>
               <Text style={styles.heroLabel}>Hemoglobin Saat Ini</Text>
-              <Text style={styles.heroDate}>Update Terakhir: Hari ini</Text>
+              <Text style={styles.heroDate}>Update Terakhir: {latestHBLabel}</Text>
             </View>
             <View style={styles.iconContainer}>
               <FontAwesome5 name="heartbeat" size={24} color="#FFF" />
@@ -243,11 +257,10 @@ const ReportsScreen = () => {
         </View>
 
         <View style={styles.chartContainer}>
-          {/* Placeholder Grafik */}
-          <View style={styles.chartPlaceholder}>
-             <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={40} color="#CBD5E1" />
-             <Text style={styles.chartPlaceholderText}>Grafik perkembangan akan muncul disini</Text>
-          </View>
+          <HBTrendNativeChart
+            points={hbTrendPoints}
+            emptyMessage="Grafik perkembangan akan muncul otomatis setelah akun ini memiliki data HB."
+          />
         </View>
 
         {/* --- 3. Riwayat Laporan --- */}
@@ -458,21 +471,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  chartPlaceholder: {
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-  },
-  chartPlaceholderText: {
-    marginTop: 8,
-    color: COLORS.textSub,
-    fontSize: 12,
-  },
-
   // List
   listContainer: {
     gap: 12,

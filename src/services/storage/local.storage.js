@@ -15,6 +15,9 @@ export class LocalStorageService extends StorageService {
         super('localStorage');
         Logger.debug('LocalStorage service initialized');
     }
+    getScopedKey(baseKey, scope = 'global') {
+        return `${baseKey}:${scope || 'global'}`;
+    }
     /**
      * Set authentication token
      * @param {string} token - JWT token
@@ -98,46 +101,56 @@ export class LocalStorageService extends StorageService {
      * Set reports cache
      * @param {array} reports - Reports array
      */
-    setReportsCache(reports) {
-        this.set(StorageKeys.reports.all, reports, {
+    setReportsCache(reports, userId = 'global') {
+        const scopedKey = this.getScopedKey(StorageKeys.reports.all, userId);
+        this.set(scopedKey, reports, {
             ttl: 5 * 60 * 1000, // 5 minutes
             compress: true
         });
-        this.set(StorageKeys.reports.cacheTimestamp, Date.now());
+        this.set(this.getScopedKey(StorageKeys.reports.cacheTimestamp, userId), Date.now());
         Logger.debug('📊 Reports cached');
     }
     /**
      * Get reports cache
      * @returns {array|null}
      */
-    getReportsCache() {
-        return this.get(StorageKeys.reports.all);
+    getReportsCache(userId = 'global') {
+        return this.get(this.getScopedKey(StorageKeys.reports.all, userId));
     }
     /**
      * Clear reports cache
      */
-    clearReportsCache() {
-        this.remove(StorageKeys.reports.all);
-        this.remove(StorageKeys.reports.cacheTimestamp);
+    clearReportsCache(userId = null) {
+        if (userId) {
+            this.remove(this.getScopedKey(StorageKeys.reports.all, userId));
+            this.remove(this.getScopedKey(StorageKeys.reports.cacheTimestamp, userId));
+            Logger.debug('📊 Reports cache cleared');
+            return;
+        }
+
+        this.keys()
+            .filter((key) => key.startsWith(`${StorageKeys.reports.all}:`) || key.startsWith(`${StorageKeys.reports.cacheTimestamp}:`))
+            .forEach((key) => this.remove(key));
         Logger.debug('📊 Reports cache cleared');
     }
     /**
      * Set HB trends cache
      * @param {object} trends - HB trends data
      */
-    setHBTrendsCache(trends) {
-        this.set(StorageKeys.hemoglobin.trends, trends, {
+    setHBTrendsCache(trends, userId = 'global') {
+        const scopedKey = this.getScopedKey(StorageKeys.hemoglobin.trends, userId);
+        this.set(scopedKey, trends, {
             ttl: 10 * 60 * 1000 // 10 minutes
         });
-        this.set(StorageKeys.hemoglobin.cacheTimestamp, Date.now());
+        this.set(this.getScopedKey(StorageKeys.hemoglobin.cacheTimestamp, userId), Date.now());
         Logger.debug('❤️ HB trends cached');
     }
     /**
      * Get HB trends cache
      * @returns {object|null}
      */
-    getHBTrendsCache() {
-        return this.get(StorageKeys.hemoglobin.trends);
+    getHBTrendsCache(userId = 'global') {
+        return this.get(this.getScopedKey(StorageKeys.hemoglobin.trends, userId));
     }
     /**
      * Set notifications cache

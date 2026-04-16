@@ -87,13 +87,14 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.tester_mobile'
+    namespace 'com.modiva.mobile'
     defaultConfig {
-        applicationId 'com.anonymous.tester_mobile'
+        applicationId 'com.modiva.mobile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
+        setProperty("archivesBaseName", "Modiva")
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const STORAGE_KEYS = {
   AUTH_TOKEN: '@modiva_auth_token',
   USER_DATA: '@modiva_user_data',
+  STORE_STATE: '@modiva_store_state',
   REMEMBER_ME: '@modiva_remember_me',
   SETTINGS: '@modiva_settings',
   NOTIFICATIONS: '@modiva_notifications',
@@ -233,6 +234,7 @@ export const clearUserSession = async () => {
   return await removeMultiple([
     STORAGE_KEYS.AUTH_TOKEN,
     STORAGE_KEYS.USER_DATA,
+    STORAGE_KEYS.STORE_STATE,
   ]);
 };
 // ==================== Settings Storage Helpers ====================

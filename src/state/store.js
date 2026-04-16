@@ -3,7 +3,7 @@
  * Redux-like state management with actions and reducers
  * @module state/store
  */
-import { getJSON, setJSON } from '../utils/helpers/storageHelpers.js';
+import { getJSON, setJSON, STORAGE_KEYS } from '../utils/helpers/storageHelpers.js';
 import { Logger } from '../utils/logger.js';
 import { AuthState } from './auth.state.js';
 import { NotificationState } from './notification.state.js';
@@ -316,7 +316,7 @@ class Store {
                 }
             };
             
-            await setJSON('modiva_store_state', stateToPersist);
+            await setJSON(STORAGE_KEYS.STORE_STATE, stateToPersist);
             Logger.debug('💾 State persisted');
         } catch (error) {
             Logger.error('Failed to persist state:', error);
@@ -327,7 +327,7 @@ class Store {
      */
     async restore() {
         try {
-            const parsedState = await getJSON('modiva_store_state');
+            const parsedState = await getJSON(STORAGE_KEYS.STORE_STATE);
             if (parsedState) {
                 const prevState = this.getState();
                 

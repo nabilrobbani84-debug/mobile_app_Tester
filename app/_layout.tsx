@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -56,6 +56,34 @@ function AppStartupEffects() {
   return null;
 }
 
+function AuthNavigationGuard() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    const firstSegment = segments[0] ?? '';
+    const isRootRoute = segments.length === 0;
+    const isLoginRoute = firstSegment === 'login';
+    const isProtectedRoute = !isRootRoute && !isLoginRoute;
+
+    if (!isAuthenticated && isProtectedRoute) {
+      router.replace('/login');
+      return;
+    }
+
+    if (isAuthenticated && isLoginRoute) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, router, segments]);
+
+  return null;
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
@@ -63,6 +91,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <AppStartupEffects />
+        <AuthNavigationGuard />
         <Stack>
           {/* Tambahkan ini: Sembunyikan header untuk halaman index (Splash) */}
           <Stack.Screen name="index" options={{ headerShown: false }} />

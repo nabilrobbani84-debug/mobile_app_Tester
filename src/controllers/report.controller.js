@@ -11,6 +11,7 @@ import { imageCompressor } from '../services/image/compressor.js';
 import { imageValidator } from '../services/image/validator.js';
 import { localStorageService } from '../services/storage/local.storage.js';
 import { ActionTypes, store } from '../state/store.js';
+import { buildHemoglobinTrendPoints, getLatestHemoglobinValue, normalizeReportsForCurrentUser } from '../utils/helpers/hemoglobinHelpers.js';
 import { Logger } from '../utils/logger.js';
 
 /**
@@ -105,8 +106,34 @@ export const ReportController = {
                     consumptionCount: (store.getState()?.user?.profile?.consumptionCount || 0) + 1
                 });
 
+                const userId = store.getState()?.user?.profile?.id || 'global';
+                const reportList = normalizeReportsForCurrentUser(
+                    [newReport.toJSON(), ...(store.getState()?.reports?.list || [])],
+                    userId
+                ).sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+                const hbTrendPoints = buildHemoglobinTrendPoints(reportList, {
+                    userId,
+                    fallbackValue: newReport.hbValue,
+                    fallbackDate: newReport.date
+                });
+                const latestHB = getLatestHemoglobinValue(hbTrendPoints, newReport.hbValue);
+
+                if (latestHB != null) {
+                    store.dispatch(ActionTypes.USER_UPDATE_HB, latestHB);
+                    store.dispatch(ActionTypes.USER_UPDATE_PROFILE, {
+                        hbLast: latestHB,
+                        hb: latestHB
+                    });
+                }
+
                 // Clear cache
-                localStorageService.clearReportsCache();
+                localStorageService.clearReportsCache(userId);
+                localStorageService.setReportsCache(reportList, userId);
+                localStorageService.setHBTrendsCache({
+                    labels: hbTrendPoints.map((point) => point.label),
+                    data: hbTrendPoints.map((point) => point.value),
+                    points: hbTrendPoints
+                }, userId);
 
                 // Track analytics
                 analyticsService.trackEvent(EventTypes.REPORT_SUBMIT, {
@@ -227,14 +254,36 @@ export const ReportController = {
 
             if (response.success && response.data) {
                 // Update state
-                store.dispatch(ActionTypes.REPORT_SET_LIST, response.data.reports || []);
+                const userId = store.getState()?.user?.profile?.id || 'global';
+                const reports = normalizeReportsForCurrentUser(response.data.reports || [], userId)
+                    .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+                store.dispatch(ActionTypes.REPORT_SET_LIST, reports);
 
-                // Update statistics
-                if (response.data.hb_trends) {
-                    // Update HB trends
+                const hbTrendPoints = buildHemoglobinTrendPoints(
+                    response.data.hb_trends || reports,
+                    {
+                        userId,
+                        fallbackValue: store.getState()?.user?.profile?.hbLast || null
+                    }
+                );
+                const latestHB = getLatestHemoglobinValue(hbTrendPoints, store.getState()?.user?.profile?.hbLast || null);
+
+                if (latestHB != null) {
+                    store.dispatch(ActionTypes.USER_UPDATE_HB, latestHB);
+                    store.dispatch(ActionTypes.USER_UPDATE_PROFILE, {
+                        hbLast: latestHB,
+                        hb: latestHB
+                    });
                 }
 
-                Logger.success(`✅ Loaded ${response.data.reports?.length || 0} reports`);
+                localStorageService.setReportsCache(reports, userId);
+                localStorageService.setHBTrendsCache({
+                    labels: hbTrendPoints.map((point) => point.label),
+                    data: hbTrendPoints.map((point) => point.value),
+                    points: hbTrendPoints
+                }, userId);
+
+                Logger.success(`✅ Loaded ${reports.length || 0} reports`);
             }
 
         } catch (error) {
