@@ -96,7 +96,7 @@ const MockUserAPI = {
      * Mock update profile
      */
     async updateProfile(data) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 150));
         Logger.info('🎭 Mock API: Update Profile with data:', data);
         
         // Update MOCK_SISWA_DB if possible

@@ -25,7 +25,7 @@ export const normalizeReportsForCurrentUser = (reports = [], userId = null) => {
       }
 
       if (report?.userId == null && report?.user_id == null) {
-        return true;
+        return false;
       }
 
       return String(report.userId ?? report.user_id) === normalizedUserId;

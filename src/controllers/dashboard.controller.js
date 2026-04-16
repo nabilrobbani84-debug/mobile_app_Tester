@@ -82,8 +82,12 @@ export const DashboardController = {
 
             // FIX: Added safer check for response.data
             if (response && response.success && response.data) {
+                const scopedReports = (response.data.reports || []).map((report) => ({
+                    ...report,
+                    userId: report.userId || report.user_id || userId
+                }));
                 const reports = normalizeReportsForCurrentUser(
-                    response.data.reports || [],
+                    scopedReports,
                     userId
                 ).sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
 

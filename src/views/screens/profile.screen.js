@@ -30,6 +30,7 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { isAuthenticated, logout: logoutSession } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   
   // State untuk Data User - Ambil dari Global Store
   const [user, setUser] = useState(store.getState().user.profile || {});
@@ -138,40 +139,92 @@ const ProfileScreen = () => {
 
   // Fungsi Membuka Modal Edit
   const handleEditPress = () => {
-    setEditData({...user}); // Copy data user saat ini ke form edit
+    setEditData({
+      ...user,
+      height: user.height != null ? String(user.height) : '',
+      weight: user.weight != null ? String(user.weight) : '',
+    });
     setModalVisible(true);
+  };
+
+  const normalizeProfilePayload = (payload) => {
+    const normalizeNumber = (value) => {
+      if (value === '' || value == null) {
+        return null;
+      }
+
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    return {
+      ...payload,
+      name: String(payload.name || '').trim(),
+      school: String(payload.school || '').trim(),
+      birthPlace: String(payload.birthPlace || '').trim(),
+      height: normalizeNumber(payload.height),
+      weight: normalizeNumber(payload.weight),
+    };
   };
 
   // Fungsi Menyimpan Perubahan
   const handleSaveProfile = async () => {
-    if (!editData.name || !editData.school) {
+    if (isSavingProfile) {
+      return;
+    }
+
+    const normalizedPayload = normalizeProfilePayload(editData);
+
+    if (!normalizedPayload.name || !normalizedPayload.school) {
         Alert.alert("Error", "Nama dan Sekolah tidak boleh kosong!");
         return;
     }
 
     try {
-        // Show loading indicator usually handled by global state or local state, simplified here
-        const response = await UserAPI.updateProfile(editData);
-        
-        if (response.success) {
-            const mergedProfile = new UserModel({
-              ...store.getState().user.profile,
-              ...editData,
-              ...(response.data || {}),
+        setIsSavingProfile(true);
+        const mergedProfile = new UserModel({
+          ...store.getState().user.profile,
+          ...normalizedPayload,
+        }).toJSON();
+
+        setUser(mergedProfile);
+        store.dispatch(ActionTypes.USER_SET_PROFILE, mergedProfile);
+        await saveUserData(mergedProfile);
+        setModalVisible(false);
+        store.dispatch(ActionTypes.UI_SHOW_TOAST, {
+          type: 'success',
+          message: 'Profil berhasil diperbarui'
+        });
+
+        const apiPayload = new UserModel(mergedProfile).toAPIFormat();
+        UserAPI.updateProfile(apiPayload)
+          .then(async (response) => {
+            const responsePayload = response?.data || response?.user || response;
+            if (response?.success === false) {
+              throw new Error(response?.message || 'Gagal memperbarui profil');
+            }
+
+            const syncedProfile = new UserModel({
+              ...mergedProfile,
+              ...responsePayload,
             }).toJSON();
 
-            setUser(mergedProfile);
-            store.dispatch(ActionTypes.USER_SET_PROFILE, mergedProfile);
-            await saveUserData(mergedProfile);
-    
-            setModalVisible(false); // Tutup modal
-            Alert.alert("Sukses", "Profil berhasil diperbarui!");
-        } else {
-             Alert.alert("Error", response.message || "Gagal memperbarui profil");
-        }
+            setUser(syncedProfile);
+            store.dispatch(ActionTypes.USER_SET_PROFILE, syncedProfile);
+            await saveUserData(syncedProfile);
+          })
+          .catch((error) => {
+            Logger.warn('Sinkronisasi profil ke server gagal, data lokal tetap dipakai.', error?.message || error);
+            store.dispatch(ActionTypes.UI_SHOW_TOAST, {
+              type: 'info',
+              message: 'Perubahan profil disimpan di aplikasi dan akan disinkronkan lagi saat koneksi stabil.'
+            });
+          });
     } catch (error) {
         console.error("Update profile failed:", error);
         Alert.alert("Error", "Gagal memperbarui profil. Silakan coba lagi.");
+    } finally {
+        setIsSavingProfile(false);
     }
   };
 
@@ -192,13 +245,17 @@ const ProfileScreen = () => {
             setIsLoggingOut(true);
             try {
               await AuthController.logout();
-              await logoutSession();
-              router.replace('/');
             } catch (error) {
-              console.error('Logout gagal:', error);
-              Alert.alert("Error", "Gagal keluar dari akun. Silakan coba lagi.");
+              console.error('Logout controller gagal, lanjut paksa putus sesi lokal:', error);
             } finally {
-              setIsLoggingOut(false);
+              try {
+                await logoutSession();
+              } catch (sessionError) {
+                console.error('Logout sesi lokal gagal:', sessionError);
+              } finally {
+                router.replace('/');
+                setIsLoggingOut(false);
+              }
             }
           }
         }
@@ -378,8 +435,14 @@ const ProfileScreen = () => {
               </View>
             </ScrollView>
 
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-              <Text style={styles.saveButtonText}>Simpan Perubahan</Text>
+            <TouchableOpacity
+              style={[styles.saveButton, isSavingProfile && styles.saveButtonDisabled]}
+              onPress={handleSaveProfile}
+              disabled={isSavingProfile}
+            >
+              <Text style={styles.saveButtonText}>
+                {isSavingProfile ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -666,6 +729,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
     marginBottom: 12,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
     color: 'white',

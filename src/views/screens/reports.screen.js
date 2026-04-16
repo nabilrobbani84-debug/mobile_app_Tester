@@ -1,6 +1,6 @@
 // src/views/screens/reports.screen.js
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -60,17 +60,20 @@ const ReportsScreen = () => {
   const [userInfo, setUserInfo] = useState({ name: '', nisn: '-' });
   const [currentHB, setCurrentHB] = useState('-');
   const [reports, setReports] = useState([]);
+  const [activeUserId, setActiveUserId] = useState(store.getState()?.user?.profile?.id || null);
 
   // --- Logic Load Data ---
   const loadData = async () => {
     try {
       await ReportController.loadReports();
       const state = store.getState();
+      const currentUserId = state.user.profile?.id || null;
       
       setUserInfo(state.user.profile || { name: 'Siswa', nisn: '-' });
+      setActiveUserId(currentUserId);
       const reportList = state.reports.list || [];
       const trendPoints = buildHemoglobinTrendPoints(reportList, {
-        userId: state.user.profile?.id,
+        userId: currentUserId,
         fallbackValue: state.user.hemoglobin?.current || state.user.profile?.hbLast || null,
         fallbackDate: state.user.profile?.updatedAt || Date.now()
       });
@@ -87,6 +90,16 @@ const ReportsScreen = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const currentUserId = store.getState()?.user?.profile?.id || null;
+      if (currentUserId !== activeUserId) {
+        setLoading(true);
+      }
+      loadData();
+    }, [activeUserId])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

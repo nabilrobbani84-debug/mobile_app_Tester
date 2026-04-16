@@ -198,6 +198,18 @@ export class LocalStorageService extends StorageService {
         return this.get(StorageKeys.notifications.deleted, []);
     }
     /**
+     * Clear notifications cache and related counters
+     */
+    clearNotificationsCache() {
+        this.remove(StorageKeys.notifications.all);
+        this.remove(StorageKeys.notifications.unread);
+        this.remove(StorageKeys.notifications.unreadCount);
+        this.remove(StorageKeys.notifications.cacheTimestamp);
+        this.remove(StorageKeys.notifications.lastNotification);
+        this.remove(StorageKeys.notifications.deleted);
+        Logger.debug('🔔 Notifications cache cleared');
+    }
+    /**
      * Add to deleted notifications
      * @param {object} notification - Notification object
      */
@@ -337,7 +349,11 @@ export class LocalStorageService extends StorageService {
         this.removeUserProfile();
         this.clearReportsCache();
         this.clearNotificationsCache();
+        this.clearOfflineQueue();
         this.clearFormDraft(StorageKeys.forms.reportDraft);
+        this.remove(StorageKeys.hemoglobin.latest);
+        this.remove(StorageKeys.hemoglobin.history);
+        this.remove(StorageKeys.hemoglobin.statistics);
         
         Logger.info('🗑️ All app data cleared');
     }

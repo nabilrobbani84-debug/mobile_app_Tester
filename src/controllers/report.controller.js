@@ -31,13 +31,19 @@ export const ReportController = {
         Logger.info('📤 ReportController: Submitting report');
 
         try {
+            const normalizedDate = reportData.date instanceof Date
+                ? reportData.date.toISOString().split('T')[0]
+                : String(reportData.date || '').trim();
             const normalizedPhoto = typeof reportData.photo === 'string'
                 ? { uri: reportData.photo, name: 'vitamin-photo.jpg', type: 'image/jpeg' }
                 : reportData.photo;
+            const normalizedNotes = String(reportData.notes || '').trim();
 
             // Validate report data
             const report = new ReportModel({
                 ...reportData,
+                date: normalizedDate,
+                notes: normalizedNotes,
                 photo: normalizedPhoto || reportData.photoUri || null
             });
             const validation = report.validate();
@@ -64,7 +70,7 @@ export const ReportController = {
 
             // Create FormData
             const formData = new FormData();
-            formData.append('date', reportData.date);
+            formData.append('date', normalizedDate);
             if (compressedImage) {
                 if (compressedImage?.uri) {
                     formData.append('photo', compressedImage);
@@ -72,12 +78,12 @@ export const ReportController = {
                     formData.append('photo', compressedImage, 'vitamin-photo.jpg');
                 }
             }
-            if (reportData.notes) {
-                formData.append('notes', reportData.notes);
+            if (normalizedNotes) {
+                formData.append('notes', normalizedNotes);
             }
 
-            formData.date = reportData.date;
-            formData.notes = reportData.notes || '';
+            formData.date = normalizedDate;
+            formData.notes = normalizedNotes;
             formData.photoUri = compressedImage?.uri || reportData.photo || null;
 
             // Submit to API
@@ -85,18 +91,19 @@ export const ReportController = {
 
             if (response.success) {
                 Logger.success('✅ Report submitted successfully');
+                const responseData = response.data || response.report || {};
 
                 // Create new report model
                 const newReport = new ReportModel({
-                    id: response.data.report_id,
+                    id: responseData.report_id || responseData.id || `report-${Date.now()}`,
                     userId: store.getState()?.user?.profile?.id,
-                    date: reportData.date,
-                    photoUrl: response.data.photo_url || compressedImage?.uri || null,
-                    notes: reportData.notes,
+                    date: normalizedDate,
+                    photoUrl: responseData.photo_url || responseData.photoUrl || compressedImage?.uri || null,
+                    notes: normalizedNotes,
                     hbValue: store.getState()?.user?.profile?.hbLast || null,
                     status: 'Selesai',
-                    createdAt: response.data.timestamp,
-                    timestamp: new Date(response.data.timestamp || Date.now()).getTime()
+                    createdAt: responseData.timestamp || responseData.created_at || new Date().toISOString(),
+                    timestamp: new Date(responseData.timestamp || responseData.created_at || Date.now()).getTime()
                 });
 
                 // Update state
@@ -137,8 +144,8 @@ export const ReportController = {
 
                 // Track analytics
                 analyticsService.trackEvent(EventTypes.REPORT_SUBMIT, {
-                    date: reportData.date,
-                    hasNotes: !!reportData.notes
+                    date: normalizedDate,
+                    hasNotes: !!normalizedNotes
                 });
 
                 // Track photo upload
@@ -159,6 +166,8 @@ export const ReportController = {
                     report: newReport.toJSON()
                 };
             }
+
+            throw new Error(response?.message || 'Laporan belum berhasil dikirim.');
 
         } catch (error) {
             Logger.error('❌ Report submission failed:', error);
@@ -255,7 +264,11 @@ export const ReportController = {
             if (response.success && response.data) {
                 // Update state
                 const userId = store.getState()?.user?.profile?.id || 'global';
-                const reports = normalizeReportsForCurrentUser(response.data.reports || [], userId)
+                const scopedReports = (response.data.reports || []).map((report) => ({
+                    ...report,
+                    userId: report.userId || report.user_id || userId
+                }));
+                const reports = normalizeReportsForCurrentUser(scopedReports, userId)
                     .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
                 store.dispatch(ActionTypes.REPORT_SET_LIST, reports);
 

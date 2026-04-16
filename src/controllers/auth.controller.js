@@ -4,6 +4,7 @@
  * @module controllers/auth
  */
 import { UserModel } from '../models/User.model.js';
+import { NotificationController } from './notification.controller.js';
 import { analyticsService, EventTypes } from '../services/analytics/analytics.service.js';
 import { AuthAPI } from '../services/api/auth.api.js';
 import { localStorageService } from '../services/storage/local.storage.js';
@@ -99,6 +100,8 @@ export const AuthController = {
      */
     async logout() {
         Logger.info('🚪 AuthController: Logout');
+        let logoutError = null;
+
         try {
             // Show loading
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'logout', isLoading: true });
@@ -110,25 +113,53 @@ export const AuthController = {
             }
             // Track analytics
             analyticsService.trackEvent(EventTypes.USER_LOGOUT);
-            // Clear state
-            store.dispatch(ActionTypes.APP_RESET);
-            // Clear storage
-            localStorageService.clearAppData();
-            await clearUserSession();
-            await clearReportsCache();
-            await clearRememberMe();
-            Logger.success('✅ Logout successful');
-            // Show success message
-            store.dispatch(ActionTypes.UI_SHOW_TOAST, {
-                type: 'success',
-                message: 'Berhasil logout'
-            });
         } catch (error) {
+            logoutError = error;
             Logger.error('❌ Logout failed:', error);
-            throw error;
         } finally {
+            try {
+                await NotificationController.cancelDailyReminder();
+            } catch (error) {
+                Logger.warn('⚠️ Failed to cancel reminder during logout:', error);
+            }
+
+            try {
+                NotificationController.stopScheduler();
+            } catch (error) {
+                Logger.warn('⚠️ Failed to stop reminder scheduler during logout:', error);
+            }
+
+            try {
+                localStorageService.clearAppData();
+            } catch (error) {
+                Logger.warn('⚠️ Failed to clear local storage service data during logout:', error);
+            }
+
+            try {
+                await clearUserSession();
+                await clearReportsCache();
+                await clearRememberMe();
+            } catch (error) {
+                Logger.warn('⚠️ Failed to clear persisted session during logout:', error);
+            }
+
+            // Clear state at the end so app always returns to logged-out state
+            store.dispatch(ActionTypes.APP_RESET);
+
+            if (!logoutError) {
+                Logger.success('✅ Logout successful');
+                store.dispatch(ActionTypes.UI_SHOW_TOAST, {
+                    type: 'success',
+                    message: 'Berhasil logout'
+                });
+            }
+
             // Hide loading
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'logout', isLoading: false });
+        }
+
+        if (logoutError) {
+            throw logoutError;
         }
     },
     /**
