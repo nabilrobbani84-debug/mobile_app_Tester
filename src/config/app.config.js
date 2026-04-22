@@ -30,14 +30,6 @@ const toBoolean = (value, fallback = false) => {
   return fallback;
 };
 
-const isLocalApiUrl = (url = '') => {
-  if (!url) return true;
-
-  return /\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|0\.0\.0\.0|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)/i.test(url);
-};
-
-const isInstalledApp = !__DEV__;
-
 // Environment configurations
 const environments = {
   development: {
@@ -63,7 +55,7 @@ const environments = {
   production: {
     label: 'Production',
     badgeColor: 'transparent',
-    apiUrl: getConfigValue('EXPO_PUBLIC_API_URL', 'REACT_APP_API_URL') || 'http://192.168.100.104:8000/api', // Point to PC's local IP for physical device
+    apiUrl: getConfigValue('EXPO_PUBLIC_API_URL', 'REACT_APP_API_URL') || 'https://api.modiva.app/api',
     useMockApi: false,
     debug: false,
     logLevel: 'error'
@@ -88,11 +80,6 @@ const getCurrentEnvironment = () => {
 
 const currentEnv = getCurrentEnvironment();
 const resolvedEnvironment = environments[currentEnv];
-const explicitMockApiSetting = getConfigValue('EXPO_PUBLIC_USE_MOCK_API', 'REACT_APP_USE_MOCK_API');
-const shouldForceMockApiForInstalledApp =
-  explicitMockApiSetting === undefined &&
-  isInstalledApp &&
-  isLocalApiUrl(resolvedEnvironment.apiUrl);
 
 const environmentConfig = {
   ...resolvedEnvironment,

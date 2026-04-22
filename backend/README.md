@@ -2,7 +2,7 @@
 
 Backend sederhana untuk menerima login siswa, profile, upload avatar, upload bukti vitamin, notifikasi, dan data sekolah dari app mobile lalu menyimpannya ke SQLite.
 
-## Jalankan
+## Jalankan Lokal
 
 ```bash
 cd backend
@@ -48,3 +48,44 @@ Beberapa akun siswa awal sudah dibuat di database:
 - File upload: `backend/uploads/`
 
 Saat user upload avatar baru atau menghapus avatar, backend akan membersihkan file avatar lama yang sudah tidak direferensikan lagi.
+
+## Siap Deploy
+
+Backend ini sekarang sudah disiapkan untuk deploy generik:
+
+- [Dockerfile](C:\project\mobile-app-modiva\mobile_tester\backend\Dockerfile)
+- [Procfile](C:\project\mobile-app-modiva\mobile_tester\backend\Procfile)
+- [.env.example](C:\project\mobile-app-modiva\mobile_tester\backend\.env.example)
+- [railway.toml](C:\project\mobile-app-modiva\mobile_tester\backend\railway.toml)
+
+### Opsi 1: Deploy dengan Docker di VPS
+
+```bash
+cd backend
+docker build -t modiva-backend .
+docker run -d --name modiva-backend -p 8000:8000 -v $(pwd)/data:/app/data -v $(pwd)/uploads:/app/uploads modiva-backend
+```
+
+### Opsi 2: Deploy ke platform seperti Railway/Render
+
+- gunakan root folder `backend`
+- install command: `pip install -r requirements.txt`
+- start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- pastikan folder `data/` dan `uploads/` punya persistent storage
+
+### Opsi 3: Deploy ke Railway
+
+- root service: `backend`
+- Railway akan memakai [Dockerfile](C:\project\mobile-app-modiva\mobile_tester\backend\Dockerfile) dan [railway.toml](C:\project\mobile-app-modiva\mobile_tester\backend\railway.toml)
+- healthcheck: `/health`
+- mount volume persisten untuk:
+  - `/app/data`
+  - `/app/uploads`
+- setelah deploy berhasil, catat domain publik Railway lalu gunakan sebagai `EXPO_PUBLIC_API_URL`
+
+### Catatan penting produksi
+
+- SQLite cocok untuk tahap awal atau traffic kecil
+- untuk banyak pengguna, lebih aman pindah ke PostgreSQL/MySQL
+- upload file di produksi sebaiknya dipindah ke object storage seperti S3-compatible storage
+- jangan build APK production ke IP laptop lokal; gunakan domain publik backend

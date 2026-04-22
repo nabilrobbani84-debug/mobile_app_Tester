@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+data/
+uploads/
+*.log
+*.err
+*.db
+*.db-journal

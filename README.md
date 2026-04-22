@@ -65,6 +65,16 @@ Endpoint utama:
 - `GET /api/reports`
 - `GET /api/reports/{id}`
 
+## Deploy backend
+
+Backend sekarang sudah disiapkan untuk deploy ke server publik dengan:
+
+- [backend/Dockerfile](C:\project\mobile-app-modiva\mobile_tester\backend\Dockerfile)
+- [backend/Procfile](C:\project\mobile-app-modiva\mobile_tester\backend\Procfile)
+- [backend/.env.example](C:\project\mobile-app-modiva\mobile_tester\backend\.env.example)
+
+Untuk build app ke server publik, set `EXPO_PUBLIC_API_URL` ke domain backend kamu sebelum build APK/IPA.
+
 ## Join the community
 
 Join our community of developers creating universal apps.

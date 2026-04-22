@@ -114,8 +114,8 @@ export const ApiEndpoints = {
     changePassword: { url: '/auth/password-change', method: 'PUT', timeout: 10000 }
   },
   user: {
-    getProfile: { url: '/users/profile', method: 'GET', timeout: 5000 },
-    updateProfile: { url: '/users/profile', method: 'PUT', timeout: 10000 },
+    getProfile: { url: '/users/profile', method: 'GET', timeout: 15000 },
+    updateProfile: { url: '/users/profile', method: 'PUT', timeout: 15000 },
     uploadAvatar: { url: '/users/profile/avatar', method: 'POST', timeout: 30000 },
     deleteAvatar: { url: '/users/profile/avatar', method: 'DELETE', timeout: 10000 }
   },
