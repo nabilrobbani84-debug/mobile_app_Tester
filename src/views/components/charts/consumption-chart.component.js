@@ -7,6 +7,8 @@
 import { Logger } from '../../../utils/logger.js';
 import { ChartConfig, ChartColors } from '../../../config/constants.js';
 
+const ChartLibrary = globalThis.Chart;
+
 /**
  * Consumption Chart Component
  */
@@ -32,6 +34,11 @@ export const ConsumptionChartComponent = {
     init(canvasId = 'hb6MonthChart', data = null) {
         Logger.info('📊 ConsumptionChartComponent: Initializing');
 
+        if (typeof document === 'undefined' || !ChartLibrary) {
+            Logger.warn('Consumption chart is only available when document and Chart are ready');
+            return;
+        }
+
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
             Logger.error('Consumption chart canvas not found');
@@ -46,7 +53,7 @@ export const ConsumptionChartComponent = {
         const chartData = data || this.defaultData;
 
         const ctx = canvas.getContext('2d');
-        this.chart = new Chart(ctx, {
+        this.chart = new ChartLibrary(ctx, {
             type: 'bar',
             data: {
                 labels: chartData.labels,

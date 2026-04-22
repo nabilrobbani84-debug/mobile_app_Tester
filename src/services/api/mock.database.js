@@ -1,4 +1,5 @@
 import { Logger } from '../../utils/logger.js';
+import { toLocalDateString } from '../../utils/helpers/dateHelpers.js';
 
 export const MOCK_SISWA_DB = [
   {
@@ -149,7 +150,7 @@ const buildSeedReports = (student) => {
     return {
       id: `RPT-${student.id}-${offset + 1}`,
       userId: String(student.id),
-      date: reportDate.toISOString().split('T')[0],
+      date: toLocalDateString(reportDate),
       photoUrl: null,
       notes: offset === 0 ? 'Konsumsi vitamin tercatat dengan baik.' : 'Laporan konsumsi rutin.',
       hbValue,
@@ -201,6 +202,13 @@ export const addMockReportForUser = (userProfile = {}, reportData = {}) => {
   };
 
   mockReportsByUserId.set(userId, [newReport, ...existingReports]);
+
+  const dbUser = getMockStudentByUserId(userId);
+  if (dbUser) {
+    dbUser.consumption_count = toNumber(dbUser.consumption_count, 0) + 1;
+    dbUser.updatedAt = createdAt;
+  }
+
   return newReport;
 };
 

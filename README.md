@@ -42,6 +42,29 @@ To learn more about developing your project with Expo, look at the following res
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
+## Backend aplikasi
+
+Repo ini sekarang juga punya backend FastAPI sederhana di [backend/README.md](C:\project\mobile-app-modiva\mobile_tester\backend\README.md) untuk login, profile, upload avatar, notifikasi, sekolah, dan upload bukti vitamin.
+
+Jalankan backend:
+
+```bash
+cd backend
+python -m pip install -r requirements.txt
+python main.py
+```
+
+Endpoint utama:
+
+- `POST /api/auth/login-siswa`
+- `GET /api/users/profile`
+- `PUT /api/users/profile`
+- `POST /api/users/profile/avatar`
+- `DELETE /api/users/profile/avatar`
+- `POST /api/reports/submit`
+- `GET /api/reports`
+- `GET /api/reports/{id}`
+
 ## Join the community
 
 Join our community of developers creating universal apps.

@@ -11,11 +11,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../../config/theme';
-const { width, height } = Dimensions.get('window');
 /**
  * MainTemplate - Primary layout template for authenticated screens
  * Provides consistent header, content area, and optional footer

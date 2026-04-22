@@ -11,7 +11,6 @@ import { store } from '../../state/store.js';
 import {
     buildMockUserPayload,
     getMockStudentByUserId,
-    isRecoverableNetworkError,
     updateMockStudentProfile
 } from './mock.database.js';
 
@@ -140,12 +139,7 @@ export const UserAPI = {
                 timeout: endpoint.timeout
             });
         } catch (error) {
-            if (!isRecoverableNetworkError(error)) {
-                throw error;
-            }
-
-            Logger.warn('⚠️ UserAPI.getProfile fallback ke Mock API.', error?.message);
-            return await MockUserAPI.getProfile();
+            throw error;
         }
     },
 
@@ -165,12 +159,62 @@ export const UserAPI = {
                 timeout: endpoint.timeout
             });
         } catch (error) {
-            if (!isRecoverableNetworkError(error)) {
-                throw error;
-            }
+            throw error;
+        }
+    },
 
-            Logger.warn('⚠️ UserAPI.updateProfile fallback ke Mock API.', error?.message);
-            return await MockUserAPI.updateProfile(data);
+    /**
+     * Upload user avatar
+     * @param {FormData} formData - Multipart avatar data
+     * @returns {Promise<object>} - Upload response
+     */
+    async uploadAvatar(formData) {
+        const endpoint = ApiEndpoints.user.uploadAvatar;
+
+        if (USE_MOCK_API) {
+            return {
+                success: true,
+                message: 'Avatar uploaded successfully',
+                data: {
+                    avatar: formData?.avatarUri || null,
+                    updated_at: new Date().toISOString()
+                }
+            };
+        }
+
+        try {
+            return await apiService.upload(endpoint.url, formData, {
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Delete user avatar
+     * @returns {Promise<object>} - Delete response
+     */
+    async deleteAvatar() {
+        const endpoint = ApiEndpoints.user.deleteAvatar;
+
+        if (USE_MOCK_API) {
+            return {
+                success: true,
+                message: 'Avatar deleted successfully',
+                data: {
+                    avatar: null,
+                    updated_at: new Date().toISOString()
+                }
+            };
+        }
+
+        try {
+            return await apiService.delete(endpoint.url, {
+                timeout: endpoint.timeout
+            });
+        } catch (error) {
+            throw error;
         }
     }
 };

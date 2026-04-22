@@ -5,22 +5,49 @@
  */
 
 import * as Notifications from 'expo-notifications'; // IMPORT EXPO NOTIFICATIONS
+import { Platform } from 'react-native';
 import { NotificationModel } from '../models/Notification.model.js';
 import { analyticsService, EventTypes } from '../services/analytics/analytics.service.js';
 import { NotificationAPI } from '../services/api/notification.api.js';
 import { localStorageService } from '../services/storage/local.storage.js';
 import { ActionTypes, store } from '../state/store.js';
 import { Logger } from '../utils/logger.js';
-import { getAuthToken } from '../utils/helpers/storageHelpers.js';
+import {
+    getAuthToken,
+    getItem,
+    removeItem,
+    setItem,
+    STORAGE_KEYS
+} from '../utils/helpers/storageHelpers.js';
+
+const DAILY_REMINDER_ID_KEY = `${STORAGE_KEYS.NOTIFICATIONS}_daily_reminder_id`;
+const DAILY_REMINDER_SIGNATURE_KEY = `${STORAGE_KEYS.NOTIFICATIONS}_daily_reminder_signature`;
+const DEFAULT_REMINDER_TIME = '08:00';
 
 /**
  * Notification Controller
  */
 export const NotificationController = {
+    async ensureNotificationChannel() {
+        if (Platform.OS !== 'android') {
+            return;
+        }
+
+        await Notifications.setNotificationChannelAsync('daily-reminders', {
+            name: 'Pengingat Harian',
+            importance: Notifications.AndroidImportance.HIGH,
+            sound: 'default',
+            vibrationPattern: [0, 250, 250, 250],
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        });
+    },
+
     /**
      * Request notification permissions
      */
     async requestPermissions() {
+        await this.ensureNotificationChannel();
+
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
         
@@ -34,6 +61,98 @@ export const NotificationController = {
             return false;
         }
         return true;
+    },
+
+    getReminderSchedule(userProfile = {}) {
+        const state = store.getState();
+        const reminderTime =
+            state.user?.preferences?.reminderTime ||
+            DEFAULT_REMINDER_TIME;
+
+        const [hourString, minuteString] = String(reminderTime).split(':');
+        const hour = Number.parseInt(hourString, 10);
+        const minute = Number.parseInt(minuteString, 10);
+
+        return {
+            hour: Number.isFinite(hour) ? hour : 8,
+            minute: Number.isFinite(minute) ? minute : 0,
+            title: 'Pengingat Harian Modiva',
+            body: `Halo ${userProfile?.name || 'Sobat Modiva'}, jangan lupa minum Tablet Tambah Darah hari ini ya!`,
+            signature: `${userProfile?.id || 'guest'}-${userProfile?.name || 'user'}-${reminderTime}`
+        };
+    },
+
+    async ensureDailyReminderScheduled() {
+        const state = store.getState();
+        const profile = state.user?.profile || {};
+
+        if (!profile?.id) {
+            Logger.warn('⚠️ Daily reminder skipped because no active user profile was found.');
+            return;
+        }
+
+        const hasPermission = await this.requestPermissions();
+        if (!hasPermission) {
+            return;
+        }
+
+        const schedule = this.getReminderSchedule(profile);
+        const savedIdentifier = await getItem(DAILY_REMINDER_ID_KEY);
+        const savedSignature = await getItem(DAILY_REMINDER_SIGNATURE_KEY);
+
+        if (savedIdentifier && savedSignature === schedule.signature) {
+            Logger.info('🔔 Daily reminder already scheduled.', { identifier: savedIdentifier });
+            return;
+        }
+
+        if (savedIdentifier) {
+            try {
+                await Notifications.cancelScheduledNotificationAsync(savedIdentifier);
+            } catch (error) {
+                Logger.warn('⚠️ Failed to replace previous daily reminder.', error?.message || error);
+            }
+        }
+
+        const identifier = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: schedule.title,
+                body: schedule.body,
+                sound: 'default',
+                data: {
+                    type: 'daily-reminder',
+                    userId: profile.id
+                },
+            },
+            trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DAILY,
+                hour: schedule.hour,
+                minute: schedule.minute,
+                channelId: Platform.OS === 'android' ? 'daily-reminders' : undefined,
+            },
+        });
+
+        await setItem(DAILY_REMINDER_ID_KEY, identifier);
+        await setItem(DAILY_REMINDER_SIGNATURE_KEY, schedule.signature);
+        Logger.success('✅ Daily reminder scheduled.', {
+            hour: schedule.hour,
+            minute: schedule.minute,
+            identifier
+        });
+    },
+
+    async cancelDailyReminder() {
+        const identifier = await getItem(DAILY_REMINDER_ID_KEY);
+
+        if (identifier) {
+            try {
+                await Notifications.cancelScheduledNotificationAsync(identifier);
+            } catch (error) {
+                Logger.warn('⚠️ Failed to cancel daily reminder.', error?.message || error);
+            }
+        }
+
+        await removeItem(DAILY_REMINDER_ID_KEY);
+        await removeItem(DAILY_REMINDER_SIGNATURE_KEY);
     },
 
     /**
@@ -58,9 +177,8 @@ export const NotificationController = {
             const cachedNotifications = localStorageService.getNotificationsCache();
             
             if (cachedNotifications && !options.forceRefresh) {
-                Logger.info('📦 Using cached notifications');
+                Logger.info('📦 Showing cached notifications while refreshing from backend');
                 store.dispatch(ActionTypes.NOTIFICATION_SET_LIST, cachedNotifications);
-                return;
             }
 
             // Fetch from API
@@ -90,6 +208,13 @@ export const NotificationController = {
 
         } catch (error) {
             Logger.error('❌ Failed to load notifications:', error);
+
+            const cachedNotifications = localStorageService.getNotificationsCache();
+            if (cachedNotifications && cachedNotifications.length > 0) {
+                Logger.warn('⚠️ Backend notifications gagal, menggunakan cache lokal terakhir.');
+                store.dispatch(ActionTypes.NOTIFICATION_SET_LIST, cachedNotifications);
+                return;
+            }
 
             store.dispatch(ActionTypes.UI_SHOW_TOAST, {
                 type: 'error',
@@ -145,8 +270,8 @@ export const NotificationController = {
             // Update state
             store.dispatch(ActionTypes.NOTIFICATION_MARK_ALL_READ);
 
-            // Call API (if available)
-            // await NotificationAPI.markAllAsRead();
+            // Persist to backend
+            await NotificationAPI.markAllAsRead();
 
             // Update cache
             const state = store.getState();
@@ -352,6 +477,7 @@ export const NotificationController = {
         // 2. Guard: hanya jalankan jika sudah ada token (user sudah login)
         const token = await getAuthToken();
         if (token) {
+            await this.ensureDailyReminderScheduled();
             this.checkReminders();
             this.loadNotifications();
         } else {
@@ -362,6 +488,7 @@ export const NotificationController = {
         this.schedulerInterval = setInterval(async () => {
             const currentToken = await getAuthToken();
             if (currentToken) {
+                await this.ensureDailyReminderScheduled();
                 this.checkReminders();
             }
         }, 60 * 1000);

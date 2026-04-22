@@ -7,7 +7,7 @@ import { ApiEndpoints, USE_MOCK_API } from '../../config/api.config.js';
 import { Logger } from '../../utils/logger.js';
 import { apiService } from './api.services.js';
 import { store } from '../../state/store.js';
-import { getMockNotificationsForUser, isRecoverableNetworkError } from './mock.database.js';
+import { getMockNotificationsForUser } from './mock.database.js';
 /**
  * Mock Notification API
  */
@@ -86,12 +86,7 @@ export const NotificationAPI = {
                 timeout: endpoint.timeout
             });
         } catch (error) {
-            if (!isRecoverableNetworkError(error)) {
-                throw error;
-            }
-
-            Logger.warn('⚠️ NotificationAPI.getAll fallback ke Mock API.', error?.message);
-            return await MockNotificationAPI.getAll(params);
+            throw error;
         }
     },
     /**
@@ -111,11 +106,7 @@ export const NotificationAPI = {
                 timeout: endpoint.timeout
             });
         } catch (error) {
-            if (!isRecoverableNetworkError(error)) {
-                throw error;
-            }
-
-            return await MockNotificationAPI.markAsRead(id);
+            throw error;
         }
     },
 

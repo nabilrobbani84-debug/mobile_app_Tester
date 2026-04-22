@@ -4,13 +4,11 @@
  * @module services/api/auth.api
  */
 import { ApiEndpoints, MOCK_API_DELAY, USE_MOCK_API } from '../../config/api.config.js';
-import { AppConfig } from '../../config/app.config.js';
 import { Logger } from '../../utils/logger.js';
 import { apiService } from './api.services.js';
 import {
     buildMockLoginResponse,
     getMockStudentByCredentials,
-    isRecoverableNetworkError,
     normalizeStudentLoginPayload,
     MOCK_SISWA_DB
 } from './mock.database.js';
@@ -182,21 +180,7 @@ export const AuthAPI = {
             });
         } catch (error) {
             error.userMessage = this.extractApiErrorMessage(error);
-
-            const shouldFallbackToMock =
-                AppConfig.environment.useMockApi ||
-                isRecoverableNetworkError(error);
-
-            if (!shouldFallbackToMock) {
-                throw error;
-            }
-
-            Logger.warn('⚠️ Login siswa fallback ke Mock API karena backend tidak dapat dijangkau.', {
-                reason: error?.message,
-                code: error?.code
-            });
-
-            return await MockAuthAPI.loginSiswa(normalizedCredentials);
+            throw error;
         }
     },
     /**

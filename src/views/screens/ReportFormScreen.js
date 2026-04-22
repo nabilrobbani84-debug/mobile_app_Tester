@@ -5,33 +5,38 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ReportController } from '../../controllers/report.controller';
+import { parseLocalDate, toLocalDateString } from '../../utils/helpers/dateHelpers';
 import DatePickerField from '../components/forms/DatePickerField';
 
 const formatDateValue = (value) => {
-  const date = value instanceof Date ? value : new Date(value);
+  const date = parseLocalDate(value);
 
   if (Number.isNaN(date.getTime())) {
-    return new Date().toISOString().split('T')[0];
+    return toLocalDateString(new Date());
   }
 
-  return date.toISOString().split('T')[0];
+  return toLocalDateString(date);
 };
 
 export default function ReportFormScreen() {
   const router = useRouter();
   const draft = useMemo(() => ReportController.loadReportDraft() || {}, []);
-  const [date, setDate] = useState(draft.date ? new Date(draft.date) : new Date());
+  const [date, setDate] = useState(draft.date ? parseLocalDate(draft.date) : new Date());
   const [notes, setNotes] = useState(draft.notes || '');
   const [image, setImage] = useState(draft.photo || null);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    ReportController.saveReportDraft({
-      date: formatDateValue(date),
-      notes,
-      photo: image,
-    });
+    const timeoutId = setTimeout(() => {
+      ReportController.saveReportDraft({
+        date: formatDateValue(date),
+        notes,
+        photo: image,
+      }, { silent: true });
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
   }, [date, image, notes]);
 
   const pickImage = async () => {
@@ -39,11 +44,19 @@ export default function ReportFormScreen() {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
+      quality: 0.7,
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const selectedAsset = result.assets[0];
+      setImage({
+        uri: selectedAsset.uri,
+        name: selectedAsset.fileName || `vitamin-proof-${Date.now()}.jpg`,
+        type: selectedAsset.mimeType || 'image/jpeg',
+        size: selectedAsset.fileSize || null,
+        width: selectedAsset.width || null,
+        height: selectedAsset.height || null,
+      });
       setErrors((current) => ({ ...current, photo: null }));
     }
   };
@@ -85,7 +98,6 @@ export default function ReportFormScreen() {
 
       ReportController.clearReportDraft();
       setErrors({});
-      Alert.alert('Berhasil', 'Laporan berhasil dikirim.');
       router.back();
     } catch (error) {
       Alert.alert('Gagal', error?.message || 'Laporan belum berhasil dikirim.');
@@ -134,7 +146,11 @@ export default function ReportFormScreen() {
             onPress={pickImage}
           >
             {image ? (
-              <Image source={{ uri: image }} style={{ width: '100%', height: 200, borderRadius: 12 }} resizeMode="cover" />
+              <Image
+                source={{ uri: image?.uri || image }}
+                style={{ width: '100%', height: 200, borderRadius: 12 }}
+                resizeMode="cover"
+              />
             ) : (
               <View style={styles.uploadPlaceholder}>
                 <Ionicons name="camera-outline" size={48} color="#cbd5e1" />

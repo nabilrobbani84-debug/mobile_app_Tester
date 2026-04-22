@@ -10,7 +10,7 @@ const decodeBase64 = (input) => {
     let str = input.replace(/=+$/, '');
     let output = '';
 
-    if (str.length % 4 == 1) {
+    if (str.length % 4 === 1) {
         throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
     }
     for (let bc = 0, bs = 0, buffer, i = 0;
@@ -268,7 +268,7 @@ export const checkSessionTimeout = (timeoutMs = 30 * 60 * 1000) => {
  * Wraps screens to track user activity
  */
 export const withActivityTracking = (WrappedComponent) => {
-    return (props) => {
+    const WithActivityTracking = (props) => {
         // Update activity on mount and interactions
         // FIX: React sekarang sudah diimport di atas, jadi ini aman
         React.useEffect(() => {
@@ -277,6 +277,10 @@ export const withActivityTracking = (WrappedComponent) => {
 
         return <WrappedComponent {...props} />;
     };
+
+    WithActivityTracking.displayName = `withActivityTracking(${WrappedComponent.displayName || WrappedComponent.name || 'Component'})`;
+
+    return WithActivityTracking;
 };
 
 export default {

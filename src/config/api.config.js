@@ -115,7 +115,9 @@ export const ApiEndpoints = {
   },
   user: {
     getProfile: { url: '/users/profile', method: 'GET', timeout: 5000 },
-    updateProfile: { url: '/users/profile', method: 'PUT', timeout: 10000 }
+    updateProfile: { url: '/users/profile', method: 'PUT', timeout: 10000 },
+    uploadAvatar: { url: '/users/profile/avatar', method: 'POST', timeout: 30000 },
+    deleteAvatar: { url: '/users/profile/avatar', method: 'DELETE', timeout: 10000 }
   },
   reports: {
     submit: { url: '/reports/submit', method: 'POST', timeout: 30000 },
@@ -124,7 +126,9 @@ export const ApiEndpoints = {
   },
   notifications: {
     getAll: { url: '/notifications', method: 'GET', timeout: 5000 },
-    markAsRead: { url: '/notifications/:id/read', method: 'PUT', timeout: 5000 }
+    markAsRead: { url: '/notifications/:id/read', method: 'PUT', timeout: 5000 },
+    markAllRead: { url: '/notifications/read-all', method: 'PUT', timeout: 5000 },
+    delete: { url: '/notifications/:id', method: 'DELETE', timeout: 5000 }
   },
   schools: {
     getAll: { url: '/schools', method: 'GET', timeout: 10000 },

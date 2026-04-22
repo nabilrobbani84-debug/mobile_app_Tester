@@ -1,5 +1,6 @@
 // src/utils/validators/reportValidators.js
 // Report form and data validators
+import { endOfLocalDay, parseLocalDate, startOfLocalDay } from '../helpers/dateHelpers.js';
 /**
  * Validation result type
  * @typedef {Object} ValidationResult
@@ -23,9 +24,8 @@ export const validateConsumptionDate = (date, options = {}) => {
       error: 'Tanggal konsumsi wajib dipilih',
     };
   }
-  const selectedDate = new Date(date);
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
+  const selectedDate = parseLocalDate(date);
+  const today = endOfLocalDay(new Date());
   // Check if valid date
   if (isNaN(selectedDate.getTime())) {
     return {
@@ -44,8 +44,8 @@ export const validateConsumptionDate = (date, options = {}) => {
   if (maxDaysAgo > 0) {
     const minDate = new Date();
     minDate.setDate(minDate.getDate() - maxDaysAgo);
-    minDate.setHours(0, 0, 0, 0);
-    if (selectedDate < minDate) {
+    const minAllowedDate = startOfLocalDay(minDate);
+    if (selectedDate < minAllowedDate) {
       return {
         isValid: false,
         error: `Tanggal maksimal ${maxDaysAgo} hari yang lalu`,

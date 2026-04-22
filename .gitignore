@@ -5,3 +5,13 @@
 expo-env.d.ts
 # @end expo-cli
 node_modules/
+backend/__pycache__/
+backend/uploads/
+backend/data/
+*.log
+*.err
+*.db
+*.db-journal
+.expo/
+backend/backend.err.log
+backend/backend.out.log

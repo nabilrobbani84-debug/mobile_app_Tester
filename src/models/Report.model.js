@@ -4,6 +4,7 @@
  * @module models/Report
  */
 import { ReportStatus, ValidationConstants } from '../config/constants.js';
+import { startOfLocalDay } from '../utils/helpers/dateHelpers.js';
 import { Logger } from '../utils/logger.js';
 /**
  * Report Model Class
@@ -37,9 +38,8 @@ export class ReportModel {
                 message: 'Tanggal konsumsi harus diisi'
             });
         } else {
-            const reportDate = new Date(this.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const reportDate = startOfLocalDay(this.date);
+            const today = startOfLocalDay(new Date());
             if (reportDate > today) {
                 errors.push({
                     field: 'date',

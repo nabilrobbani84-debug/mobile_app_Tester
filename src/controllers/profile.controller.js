@@ -7,6 +7,7 @@
 import { UserModel } from '../models/User.model'; 
 import { analyticsService, EventTypes } from '../services/analytics/analytics.service';
 import { UserAPI } from '../services/api/user.api'; 
+import { localStorageService } from '../services/storage/local.storage';
 import { ActionTypes, store } from '../state/store';
 import { Logger } from '../utils/logger';
 
@@ -58,39 +59,54 @@ export const ProfileController = {
 
     /**
      * Upload Avatar Profile
-     * @param {string} imageUri - URI lokal dari ImagePicker
+     * @param {string|object} imageInput - URI lokal atau asset image picker
      */
-    async uploadAvatar(imageUri) {
-        Logger.info('📸 ProfileController: Uploading avatar', imageUri);
+    async uploadAvatar(imageInput) {
+        Logger.info('📸 ProfileController: Uploading avatar', imageInput);
 
         try {
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'uploadAvatar', isLoading: true });
 
-            // 1. Validasi Gambar (Ukuran/Tipe)
-            // Implementasi validasi bisa ditambahkan di sini menggunakan FileSystem atau ImagePicker result
-            
-            // 2. Kompresi Gambar (jika perlu)
-            // Gunakan library seperti expo-image-manipulator jika ingin mengompres gambar
-            const finalUri = imageUri; 
+            const currentProfile = store.getState()?.user?.profile || {};
+            const normalizedAvatar = typeof imageInput === 'string'
+                ? {
+                    uri: imageInput,
+                    name: `avatar-${Date.now()}.jpg`,
+                    type: 'image/jpeg',
+                  }
+                : {
+                    uri: imageInput?.uri,
+                    name: imageInput?.fileName || imageInput?.name || `avatar-${Date.now()}.jpg`,
+                    type: imageInput?.mimeType || imageInput?.type || 'image/jpeg',
+                  };
+
+            if (!normalizedAvatar?.uri) {
+                throw new Error('File avatar belum valid.');
+            }
 
             // 3. Upload ke API (Multipart Form Data)
             const formData = new FormData();
-            formData.append('avatar', {
-                uri: finalUri,
-                name: 'avatar.jpg',
-                type: 'image/jpeg',
-            });
+            formData.append('avatar', normalizedAvatar);
+            formData.avatarUri = normalizedAvatar.uri;
 
-            // const uploadResponse = await UserAPI.uploadAvatar(formData);
-            
-            // Simulasi sukses update lokal agar UI responsif instan
-            store.dispatch(ActionTypes.USER_UPDATE_PROFILE, { avatar: finalUri });
+            const uploadResponse = await UserAPI.uploadAvatar(formData);
+            const avatarUrl = uploadResponse?.data?.avatar || normalizedAvatar.uri;
+            const updatedProfile = new UserModel({
+                ...currentProfile,
+                avatar: avatarUrl,
+                updatedAt: uploadResponse?.data?.updated_at || new Date().toISOString()
+            }).toJSON();
+
+            store.dispatch(ActionTypes.USER_SET_PROFILE, updatedProfile);
+            localStorageService.setUserProfile(updatedProfile);
             
             Logger.success('✅ Avatar uploaded successfully');
             
             if (analyticsService && typeof analyticsService.trackEvent === 'function') {
                 analyticsService.trackEvent(EventTypes.ACTION_CLICK, { action: 'upload_avatar' });
             }
+
+            return updatedProfile;
 
         } catch (error) {
             Logger.error('❌ Failed to upload avatar:', error);
@@ -99,6 +115,45 @@ export const ProfileController = {
                 message: 'Gagal mengunggah foto profil.'
             });
             throw error; 
+        } finally {
+            store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'uploadAvatar', isLoading: false });
+        }
+    },
+
+    /**
+     * Delete Avatar Profile
+     */
+    async deleteAvatar() {
+        Logger.info('🗑️ ProfileController: Deleting avatar');
+
+        try {
+            store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'uploadAvatar', isLoading: true });
+
+            const currentProfile = store.getState()?.user?.profile || {};
+            const deleteResponse = await UserAPI.deleteAvatar();
+            const updatedProfile = new UserModel({
+                ...currentProfile,
+                avatar: null,
+                updatedAt: deleteResponse?.data?.updated_at || new Date().toISOString()
+            }).toJSON();
+
+            store.dispatch(ActionTypes.USER_SET_PROFILE, updatedProfile);
+            localStorageService.setUserProfile(updatedProfile);
+
+            Logger.success('✅ Avatar deleted successfully');
+
+            if (analyticsService && typeof analyticsService.trackEvent === 'function') {
+                analyticsService.trackEvent(EventTypes.ACTION_CLICK, { action: 'delete_avatar' });
+            }
+
+            return updatedProfile;
+        } catch (error) {
+            Logger.error('❌ Failed to delete avatar:', error);
+            store.dispatch(ActionTypes.UI_SHOW_TOAST, {
+                type: 'error',
+                message: 'Gagal menghapus foto profil.'
+            });
+            throw error;
         } finally {
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'uploadAvatar', isLoading: false });
         }

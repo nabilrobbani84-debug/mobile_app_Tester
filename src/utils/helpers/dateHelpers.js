@@ -53,12 +53,78 @@ export const formatISODate = (date) => {
   if (!date) return '';
   
   try {
-    const d = new Date(date);
-    return d.toISOString().split('T')[0];
+    return toLocalDateString(date);
   } catch (error) {
     console.error('ISO date formatting error:', error);
     return '';
   }
+};
+
+/**
+ * Parse date input into local Date object.
+ * Supports YYYY-MM-DD without shifting through UTC.
+ * @param {Date|string} date - Date input
+ * @returns {Date}
+ */
+export const parseLocalDate = (date) => {
+  if (date instanceof Date) {
+    return new Date(date.getTime());
+  }
+
+  if (typeof date === 'string') {
+    const normalized = date.trim();
+    const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+  }
+
+  return new Date(date);
+};
+
+/**
+ * Convert a date into a YYYY-MM-DD string using local date parts.
+ * @param {Date|string} date - Date input
+ * @returns {string}
+ */
+export const toLocalDateString = (date) => {
+  if (!date) return '';
+
+  const parsedDate = parseLocalDate(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return '';
+  }
+
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+  const day = String(parsedDate.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Normalize date to the start of local day.
+ * @param {Date|string} date - Date input
+ * @returns {Date}
+ */
+export const startOfLocalDay = (date) => {
+  const parsedDate = parseLocalDate(date);
+  parsedDate.setHours(0, 0, 0, 0);
+  return parsedDate;
+};
+
+/**
+ * Normalize date to the end of local day.
+ * @param {Date|string} date - Date input
+ * @returns {Date}
+ */
+export const endOfLocalDay = (date) => {
+  const parsedDate = parseLocalDate(date);
+  parsedDate.setHours(23, 59, 59, 999);
+  return parsedDate;
 };
 /**
  * Format time to HH:MM format

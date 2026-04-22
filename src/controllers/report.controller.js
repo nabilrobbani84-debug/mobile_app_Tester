@@ -11,8 +11,31 @@ import { imageCompressor } from '../services/image/compressor.js';
 import { imageValidator } from '../services/image/validator.js';
 import { localStorageService } from '../services/storage/local.storage.js';
 import { ActionTypes, store } from '../state/store.js';
+import { toLocalDateString } from '../utils/helpers/dateHelpers.js';
 import { buildHemoglobinTrendPoints, getLatestHemoglobinValue, normalizeReportsForCurrentUser } from '../utils/helpers/hemoglobinHelpers.js';
 import { Logger } from '../utils/logger.js';
+
+const mergeReportsByRecency = (primaryReports = [], secondaryReports = [], userId = 'global') => {
+    const mergedMap = new Map();
+
+    [...secondaryReports, ...primaryReports].forEach((report, index) => {
+        const normalized = normalizeReportsForCurrentUser([report], userId)[0];
+        if (!normalized) {
+            return;
+        }
+
+        const fallbackKey = `${normalized.date || 'no-date'}:${normalized.notes || ''}:${index}`;
+        const reportKey = String(normalized.id || fallbackKey);
+        const existing = mergedMap.get(reportKey);
+
+        if (!existing || (normalized.timestamp || 0) >= (existing.timestamp || 0)) {
+            mergedMap.set(reportKey, normalized);
+        }
+    });
+
+    return Array.from(mergedMap.values())
+        .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+};
 
 /**
  * Report Controller
@@ -31,12 +54,21 @@ export const ReportController = {
         Logger.info('📤 ReportController: Submitting report');
 
         try {
+            const userProfile = store.getState()?.user?.profile || {};
+            const userId = userProfile?.id || 'global';
             const normalizedDate = reportData.date instanceof Date
-                ? reportData.date.toISOString().split('T')[0]
+                ? toLocalDateString(reportData.date)
                 : String(reportData.date || '').trim();
             const normalizedPhoto = typeof reportData.photo === 'string'
                 ? { uri: reportData.photo, name: 'vitamin-photo.jpg', type: 'image/jpeg' }
                 : reportData.photo;
+            const uploadPhoto = normalizedPhoto?.uri
+                ? {
+                    uri: normalizedPhoto.uri,
+                    name: normalizedPhoto.name || `vitamin-proof-${Date.now()}.jpg`,
+                    type: normalizedPhoto.type || 'image/jpeg'
+                }
+                : normalizedPhoto;
             const normalizedNotes = String(reportData.notes || '').trim();
 
             // Validate report data
@@ -44,7 +76,7 @@ export const ReportController = {
                 ...reportData,
                 date: normalizedDate,
                 notes: normalizedNotes,
-                photo: normalizedPhoto || reportData.photoUri || null
+                photo: uploadPhoto || reportData.photoUri || null
             });
             const validation = report.validate();
 
@@ -57,23 +89,55 @@ export const ReportController = {
             store.dispatch(ActionTypes.UI_SET_LOADING, { key: 'submitReport', isLoading: true });
 
             // Validate image
-            if (normalizedPhoto) {
-                await this.validateImage(normalizedPhoto);
+            if (uploadPhoto) {
+                await this.validateImage(uploadPhoto);
             }
 
             // Compress image
-            let compressedImage = normalizedPhoto;
-            if (normalizedPhoto) {
+            let compressedImage = uploadPhoto;
+            if (uploadPhoto) {
                 Logger.info('🗜️ Compressing image...');
-                compressedImage = await this.compressImage(normalizedPhoto);
+                compressedImage = await this.compressImage(uploadPhoto);
             }
+
+            const submittedAt = new Date().toISOString();
+            const optimisticReportId = `report-local-${Date.now()}`;
+            const optimisticReport = new ReportModel({
+                id: optimisticReportId,
+                userId,
+                date: normalizedDate,
+                photo: compressedImage?.uri || reportData.photo || null,
+                photoUrl: compressedImage?.uri || reportData.photo || null,
+                notes: normalizedNotes,
+                hbValue: userProfile?.hbLast || userProfile?.hb || null,
+                status: 'Terkirim',
+                createdAt: submittedAt,
+                updatedAt: submittedAt,
+                timestamp: new Date(submittedAt).getTime()
+            });
+
+            store.dispatch(ActionTypes.REPORT_ADD, optimisticReport.toJSON());
+            store.dispatch(ActionTypes.USER_INCREMENT_CONSUMPTION);
+            store.dispatch(ActionTypes.USER_UPDATE_PROFILE, {
+                consumptionCount: (userProfile?.consumptionCount || 0) + 1
+            });
+
+            const optimisticReports = normalizeReportsForCurrentUser(
+                store.getState()?.reports?.list || [],
+                userId
+            ).sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+            localStorageService.setReportsCache(optimisticReports, userId);
 
             // Create FormData
             const formData = new FormData();
             formData.append('date', normalizedDate);
             if (compressedImage) {
                 if (compressedImage?.uri) {
-                    formData.append('photo', compressedImage);
+                    formData.append('photo', {
+                        uri: compressedImage.uri,
+                        name: compressedImage.name || `vitamin-proof-${Date.now()}.jpg`,
+                        type: compressedImage.type || 'image/jpeg'
+                    });
                 } else {
                     formData.append('photo', compressedImage, 'vitamin-photo.jpg');
                 }
@@ -93,37 +157,36 @@ export const ReportController = {
                 Logger.success('✅ Report submitted successfully');
                 const responseData = response.data || response.report || {};
 
-                // Create new report model
-                const newReport = new ReportModel({
-                    id: responseData.report_id || responseData.id || `report-${Date.now()}`,
-                    userId: store.getState()?.user?.profile?.id,
+                const savedReport = new ReportModel({
+                    id: responseData.report_id || responseData.id || optimisticReportId,
+                    userId,
                     date: normalizedDate,
-                    photoUrl: responseData.photo_url || responseData.photoUrl || compressedImage?.uri || null,
+                    photo: compressedImage?.uri || reportData.photo || responseData.photo_url || responseData.photoUrl || null,
+                    photoUrl: responseData.photo_url || responseData.photoUrl || compressedImage?.uri || reportData.photo || null,
                     notes: normalizedNotes,
-                    hbValue: store.getState()?.user?.profile?.hbLast || null,
+                    hbValue: store.getState()?.user?.profile?.hbLast || userProfile?.hbLast || null,
                     status: 'Selesai',
-                    createdAt: responseData.timestamp || responseData.created_at || new Date().toISOString(),
-                    timestamp: new Date(responseData.timestamp || responseData.created_at || Date.now()).getTime()
+                    createdAt: responseData.timestamp || responseData.created_at || submittedAt,
+                    updatedAt: responseData.updated_at || responseData.updatedAt || submittedAt,
+                    timestamp: new Date(responseData.timestamp || responseData.created_at || submittedAt).getTime()
                 });
 
-                // Update state
-                store.dispatch(ActionTypes.REPORT_ADD, newReport.toJSON());
-                store.dispatch(ActionTypes.USER_INCREMENT_CONSUMPTION);
-                store.dispatch(ActionTypes.USER_UPDATE_PROFILE, {
-                    consumptionCount: (store.getState()?.user?.profile?.consumptionCount || 0) + 1
+                store.dispatch(ActionTypes.REPORT_UPDATE, {
+                    id: optimisticReportId,
+                    updates: savedReport.toJSON()
                 });
 
-                const userId = store.getState()?.user?.profile?.id || 'global';
+                const currentReports = store.getState()?.reports?.list || [];
                 const reportList = normalizeReportsForCurrentUser(
-                    [newReport.toJSON(), ...(store.getState()?.reports?.list || [])],
+                    currentReports,
                     userId
                 ).sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
                 const hbTrendPoints = buildHemoglobinTrendPoints(reportList, {
                     userId,
-                    fallbackValue: newReport.hbValue,
-                    fallbackDate: newReport.date
+                    fallbackValue: savedReport.hbValue,
+                    fallbackDate: savedReport.date
                 });
-                const latestHB = getLatestHemoglobinValue(hbTrendPoints, newReport.hbValue);
+                const latestHB = getLatestHemoglobinValue(hbTrendPoints, savedReport.hbValue);
 
                 if (latestHB != null) {
                     store.dispatch(ActionTypes.USER_UPDATE_HB, latestHB);
@@ -134,7 +197,6 @@ export const ReportController = {
                 }
 
                 // Clear cache
-                localStorageService.clearReportsCache(userId);
                 localStorageService.setReportsCache(reportList, userId);
                 localStorageService.setHBTrendsCache({
                     labels: hbTrendPoints.map((point) => point.label),
@@ -163,7 +225,7 @@ export const ReportController = {
 
                 return {
                     success: true,
-                    report: newReport.toJSON()
+                    report: savedReport.toJSON()
                 };
             }
 
@@ -172,6 +234,26 @@ export const ReportController = {
         } catch (error) {
             Logger.error('❌ Report submission failed:', error);
 
+            const userProfile = store.getState()?.user?.profile || {};
+            const userId = userProfile?.id || 'global';
+            const localReports = normalizeReportsForCurrentUser(
+                store.getState()?.reports?.list || [],
+                userId
+            );
+            const rollbackTarget = localReports.find((report) => String(report.id || '').startsWith('report-local-'));
+            if (rollbackTarget) {
+                store.dispatch(ActionTypes.REPORT_DELETE, rollbackTarget.id);
+                const currentCount = Number(userProfile?.consumptionCount || 0);
+                store.dispatch(ActionTypes.USER_UPDATE_PROFILE, {
+                    consumptionCount: Math.max(0, currentCount - 1)
+                });
+                localStorageService.setReportsCache(
+                    normalizeReportsForCurrentUser(store.getState()?.reports?.list || [], userId)
+                        .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0)),
+                    userId
+                );
+            }
+
             analyticsService.trackError(error, {
                 context: 'submit_report',
                 date: reportData.date
@@ -179,7 +261,7 @@ export const ReportController = {
 
             store.dispatch(ActionTypes.UI_SHOW_TOAST, {
                 type: 'error',
-                message: error.message || 'Gagal mengirim laporan'
+                message: error.message || 'Gagal mengirim laporan. Data belum tersimpan ke database.'
             });
 
             throw error;
@@ -264,12 +346,14 @@ export const ReportController = {
             if (response.success && response.data) {
                 // Update state
                 const userId = store.getState()?.user?.profile?.id || 'global';
+                const cachedReports = localStorageService.getReportsCache(userId) || [];
                 const scopedReports = (response.data.reports || []).map((report) => ({
                     ...report,
-                    userId: report.userId || report.user_id || userId
+                    userId: report.userId || report.user_id || userId,
+                    photo: report.photo || report.photoUrl || report.photo_url || null,
+                    photoUrl: report.photoUrl || report.photo_url || report.photo || null
                 }));
-                const reports = normalizeReportsForCurrentUser(scopedReports, userId)
-                    .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+                const reports = mergeReportsByRecency(scopedReports, cachedReports, userId);
                 store.dispatch(ActionTypes.REPORT_SET_LIST, reports);
 
                 const hbTrendPoints = buildHemoglobinTrendPoints(
@@ -338,15 +422,17 @@ export const ReportController = {
      * Save report draft
      * @param {object} reportData - Report draft data
      */
-    saveReportDraft(reportData) {
+    saveReportDraft(reportData, options = {}) {
         try {
             localStorageService.setFormDraft('modiva_form_report_draft', reportData);
             Logger.info('💾 Report draft saved');
 
-            store.dispatch(ActionTypes.UI_SHOW_TOAST, {
-                type: 'info',
-                message: 'Draft tersimpan'
-            });
+            if (!options.silent) {
+                store.dispatch(ActionTypes.UI_SHOW_TOAST, {
+                    type: 'info',
+                    message: 'Draft tersimpan'
+                });
+            }
 
         } catch (error) {
             Logger.error('❌ Failed to save draft:', error);

@@ -53,6 +53,21 @@ const formatReportDate = (value) => {
 
 const ReportsScreen = () => {
   const router = useRouter();
+  const syncFromStore = useCallback(() => {
+    const state = store.getState();
+    const currentUserId = state.user.profile?.id || null;
+    const reportList = state.reports.list || [];
+    const trendPoints = buildHemoglobinTrendPoints(reportList, {
+      userId: currentUserId,
+      fallbackValue: state.user.hemoglobin?.current || state.user.profile?.hbLast || null,
+      fallbackDate: state.user.profile?.updatedAt || Date.now()
+    });
+
+    setUserInfo(state.user.profile || { name: 'Siswa', nisn: '-' });
+    setActiveUserId(currentUserId);
+    setCurrentHB(getLatestHemoglobinValue(trendPoints, state.user.hemoglobin?.current || state.user.profile?.hbLast || null) ?? '-');
+    setReports(reportList);
+  }, []);
   
   // --- State ---
   const [loading, setLoading] = useState(true);
@@ -63,33 +78,27 @@ const ReportsScreen = () => {
   const [activeUserId, setActiveUserId] = useState(store.getState()?.user?.profile?.id || null);
 
   // --- Logic Load Data ---
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       await ReportController.loadReports();
-      const state = store.getState();
-      const currentUserId = state.user.profile?.id || null;
-      
-      setUserInfo(state.user.profile || { name: 'Siswa', nisn: '-' });
-      setActiveUserId(currentUserId);
-      const reportList = state.reports.list || [];
-      const trendPoints = buildHemoglobinTrendPoints(reportList, {
-        userId: currentUserId,
-        fallbackValue: state.user.hemoglobin?.current || state.user.profile?.hbLast || null,
-        fallbackDate: state.user.profile?.updatedAt || Date.now()
-      });
-      setCurrentHB(getLatestHemoglobinValue(trendPoints, state.user.hemoglobin?.current || state.user.profile?.hbLast || null) ?? '-');
-      setReports(reportList);
+      syncFromStore();
     } catch (error) {
       console.error('Failed to load reports:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [syncFromStore]);
 
   useEffect(() => {
+    syncFromStore();
     loadData();
-  }, []);
+    const unsubscribe = store.subscribe(() => {
+      syncFromStore();
+    });
+
+    return () => unsubscribe();
+  }, [loadData, syncFromStore]);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,13 +107,13 @@ const ReportsScreen = () => {
         setLoading(true);
       }
       loadData();
-    }, [activeUserId])
+    }, [activeUserId, loadData])
   );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData();
-  }, []);
+  }, [loadData]);
 
   const hbTrendPoints = buildHemoglobinTrendPoints(reports, {
     userId: userInfo.id,
@@ -306,7 +315,9 @@ const ReportsScreen = () => {
                 <View style={styles.reportDetail}>
                   <Text style={styles.reportTitle}>Pemeriksaan Rutin</Text>
                   <Text style={styles.reportNotes} numberOfLines={1}>
-                    {report.notes || 'Tidak ada catatan tambahan'}
+                    {report.notes || ((report.photo || report.photoUrl || report.photo_url)
+                      ? 'Bukti minum tersimpan'
+                      : 'Tidak ada catatan tambahan')}
                   </Text>
                 </View>
 

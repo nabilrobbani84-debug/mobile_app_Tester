@@ -7,6 +7,8 @@
 import { Logger } from '../../../utils/logger.js';
 import { ChartConfig, ChartColors } from '../../../config/constants.js';
 
+const ChartLibrary = globalThis.Chart;
+
 /**
  * HB Trend Chart Component
  */
@@ -32,6 +34,11 @@ export const HBTrendChartComponent = {
     init(canvasId = 'hbTrendChart', data = null) {
         Logger.info('📈 HBTrendChartComponent: Initializing');
 
+        if (typeof document === 'undefined' || !ChartLibrary) {
+            Logger.warn('HB trend chart is only available when document and Chart are ready');
+            return;
+        }
+
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
             Logger.error('HB trend chart canvas not found');
@@ -46,7 +53,7 @@ export const HBTrendChartComponent = {
         const chartData = data || this.defaultData;
 
         const ctx = canvas.getContext('2d');
-        this.chart = new Chart(ctx, {
+        this.chart = new ChartLibrary(ctx, {
             type: 'line',
             data: {
                 labels: chartData.labels,

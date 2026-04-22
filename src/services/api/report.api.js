@@ -21,7 +21,7 @@ const MockReportAPI = {
      * Mock submit report
      */
     async submit(reportData) {
-        await new Promise(resolve => setTimeout(resolve, MOCK_API_DELAY * 1.5));
+        await new Promise(resolve => setTimeout(resolve, Math.min(MOCK_API_DELAY, 150)));
         
         Logger.info('🎭 Mock API: Submit Report', reportData);
 
@@ -49,7 +49,7 @@ const MockReportAPI = {
      * Mock get all reports
      */
     async getAll(params = {}) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, Math.min(MOCK_API_DELAY, 150)));
         
         Logger.info('🎭 Mock API: Get All Reports', params);
 
@@ -57,12 +57,17 @@ const MockReportAPI = {
         const currentUser = getMockStudentByUserId(userProfile?.id);
         const reports = getMockReportsForUser(userProfile).map((report) => ({
             id: report.id,
+            userId: report.userId,
             date: report.date,
             hb_value: report.hbValue ?? report.hb_value ?? currentUser?.hb_last ?? 12.0,
             status: report.status || 'Selesai',
+            photo: report.photo || null,
+            photoUrl: report.photoUrl || report.photo_url || null,
             photo_url: report.photoUrl || report.photo_url || null,
             notes: report.notes || '',
-            created_at: report.createdAt || report.created_at
+            created_at: report.createdAt || report.created_at,
+            updated_at: report.updatedAt || report.updated_at,
+            timestamp: report.timestamp
         }));
         const hbTrends = reports
             .slice()
@@ -111,12 +116,10 @@ export const ReportAPI = {
                 timeout: endpoint.timeout
             });
         } catch (error) {
-            if (!isRecoverableNetworkError(error)) {
-                throw error;
-            }
-
-            Logger.warn('⚠️ ReportAPI.submit fallback ke Mock API.', error?.message);
-            return await MockReportAPI.submit(reportData);
+            Logger.error('❌ ReportAPI.submit gagal kirim ke backend. Data tidak disimpan ke database.', error);
+            const uploadError = error instanceof Error ? error : new Error(error?.message || 'Gagal mengirim laporan ke server.');
+            uploadError.message = uploadError.message || 'Gagal mengirim laporan ke server.';
+            throw uploadError;
         }
     },
     /**

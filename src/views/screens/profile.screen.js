@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 
 import { AuthController } from '../../controllers/auth.controller';
+import { ProfileController } from '../../controllers/profile.controller';
 import { UserModel } from '../../models/User.model';
 import { UserAPI } from '../../services/api/user.api'; // Import UserAPI
 import { useAuth } from '../../state/AuthContext';
@@ -31,6 +32,7 @@ const ProfileScreen = () => {
   const { isAuthenticated, logout: logoutSession } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   
   // State untuk Data User - Ambil dari Global Store
   const [user, setUser] = useState(store.getState().user.profile || {});
@@ -89,7 +91,13 @@ const ProfileScreen = () => {
   );
 
   const handlePickAvatar = async () => {
+    if (isUploadingAvatar) {
+      return;
+    }
+
     try {
+      setIsUploadingAvatar(true);
+
       // 1. Request Permission
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
@@ -107,30 +115,54 @@ const ProfileScreen = () => {
       });
 
       if (!result.canceled) {
-        const newAvatarUri = result.assets[0].uri;
-        
-        // 3. Update Local User State
-        const updatedUser = new UserModel({ ...user, avatar: newAvatarUri }).toJSON();
-        setUser(updatedUser);
-
-        // 4. Update Global Store & Persist
-        store.dispatch(ActionTypes.USER_SET_PROFILE, updatedUser);
-        await saveUserData(updatedUser);
-        
-        // 5. Save to Storage via API
-        try {
-           await UserAPI.updateProfile({ avatar: newAvatarUri });
-           Logger.info("Avatar updated in DB");
-        } catch (err) {
-           console.error("Failed to persist avatar:", err);
+        const uploadedProfile = await ProfileController.uploadAvatar(result.assets[0]);
+        if (uploadedProfile) {
+          setUser(uploadedProfile);
+          await saveUserData(uploadedProfile);
         }
-        
+
         Alert.alert("Sukses", "Foto profil berhasil diperbarui!");
       }
     } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Gagal mengambil gambar.");
+      console.error("Error uploading avatar:", error);
+      Alert.alert("Error", error?.message || "Gagal mengunggah foto profil.");
+    } finally {
+      setIsUploadingAvatar(false);
     }
+  };
+
+  const handleDeleteAvatar = () => {
+    if (!user.avatar || isUploadingAvatar) {
+      return;
+    }
+
+    Alert.alert(
+      'Hapus Foto Profil',
+      'Foto profil saat ini akan dihapus. Anda bisa upload lagi kapan saja.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsUploadingAvatar(true);
+              const updatedProfile = await ProfileController.deleteAvatar();
+              if (updatedProfile) {
+                setUser(updatedProfile);
+                await saveUserData(updatedProfile);
+              }
+              Alert.alert('Sukses', 'Foto profil berhasil dihapus.');
+            } catch (error) {
+              console.error('Error deleting avatar:', error);
+              Alert.alert('Error', error?.message || 'Gagal menghapus foto profil.');
+            } finally {
+              setIsUploadingAvatar(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   // State untuk Modal Edit
@@ -288,10 +320,26 @@ const ProfileScreen = () => {
                     {user.name ? user.name.charAt(0).toUpperCase() : '?'}
                   </Text>
                 )}
-                <TouchableOpacity style={styles.editAvatarButton} onPress={handlePickAvatar}>
+                <TouchableOpacity
+                  style={[styles.editAvatarButton, isUploadingAvatar && styles.editAvatarButtonDisabled]}
+                  onPress={handlePickAvatar}
+                  disabled={isUploadingAvatar}
+                >
                   <Ionicons name="camera" size={16} color="#3b82f6" />
                 </TouchableOpacity>
               </View>
+              {user.avatar ? (
+                <TouchableOpacity
+                  style={[styles.removeAvatarButton, isUploadingAvatar && styles.editAvatarButtonDisabled]}
+                  onPress={handleDeleteAvatar}
+                  disabled={isUploadingAvatar}
+                >
+                  <Ionicons name="trash-outline" size={14} color="#fff" />
+                  <Text style={styles.removeAvatarButtonText}>
+                    {isUploadingAvatar ? 'Memproses...' : 'Hapus foto'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               
               <Text style={styles.userName}>{user.name || 'Pengguna'}</Text>
               <Text style={styles.userEmail}>{user.email || '-'}</Text>
@@ -558,6 +606,26 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     elevation: 2,
+  },
+  editAvatarButtonDisabled: {
+    opacity: 0.6,
+  },
+  removeAvatarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239,68,68,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
+  removeAvatarButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   userName: {
     fontSize: 22,

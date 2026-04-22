@@ -12,6 +12,40 @@ import { ActionTypes, store } from '../state/store.js';
 import { buildHemoglobinTrendPoints, getLatestHemoglobinValue, normalizeReportsForCurrentUser } from '../utils/helpers/hemoglobinHelpers.js';
 import { Logger } from '../utils/logger.js';
 
+const mergeReportsByRecency = (primaryReports = [], secondaryReports = [], userId = 'global') => {
+    const mergedMap = new Map();
+
+    [...secondaryReports, ...primaryReports].forEach((report, index) => {
+        const normalized = normalizeReportsForCurrentUser([report], userId)[0];
+        if (!normalized) {
+            return;
+        }
+
+        const fallbackKey = `${normalized.date || 'no-date'}:${normalized.notes || ''}:${index}`;
+        const reportKey = String(normalized.id || fallbackKey);
+        const existing = mergedMap.get(reportKey);
+
+        if (!existing || (normalized.timestamp || 0) >= (existing.timestamp || 0)) {
+            mergedMap.set(reportKey, normalized);
+        }
+    });
+
+    return Array.from(mergedMap.values())
+        .sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+};
+
+const mergeProfileWithLocalState = (incomingProfile = {}, currentProfile = {}) => ({
+    ...currentProfile,
+    ...incomingProfile,
+    consumptionCount: Math.max(
+        Number(currentProfile?.consumptionCount || currentProfile?.consumption_count || 0),
+        Number(incomingProfile?.consumptionCount || incomingProfile?.consumption_count || 0)
+    ),
+    hbLast: incomingProfile?.hbLast ?? incomingProfile?.hb_last ?? currentProfile?.hbLast ?? null,
+    totalTarget: incomingProfile?.totalTarget ?? incomingProfile?.total_target ?? currentProfile?.totalTarget ?? 48,
+    updatedAt: incomingProfile?.updatedAt || incomingProfile?.updated_at || currentProfile?.updatedAt || new Date().toISOString()
+});
+
 /**
  * Dashboard Controller
  */
@@ -65,16 +99,12 @@ export const DashboardController = {
     async loadRecentReports() {
         try {
             const userId = store.getState()?.user?.profile?.id || 'global';
-            // Check cache first
-            const cachedReports = await localStorageService.getReportsCache(userId); // Added await just in case
-            
+            const cachedReports = await localStorageService.getReportsCache(userId);
+
             if (cachedReports && Array.isArray(cachedReports) && cachedReports.length > 0) {
-                Logger.info('📦 Using cached reports');
+                Logger.info('📦 Showing cached reports while refreshing from backend');
                 store.dispatch(ActionTypes.REPORT_SET_LIST, cachedReports);
                 this.updateHBTrends(cachedReports);
-                // Return explicitly to stop execution, but don't prevent fetching fresh data if needed
-                // If you want "stale-while-revalidate" strategy, remove the return
-                return; 
             }
 
             // Fetch from API
@@ -90,22 +120,31 @@ export const DashboardController = {
                     scopedReports,
                     userId
                 ).sort((left, right) => (right.timestamp || 0) - (left.timestamp || 0));
+                const mergedReports = mergeReportsByRecency(reports, cachedReports || [], userId);
 
                 // Update state
-                store.dispatch(ActionTypes.REPORT_SET_LIST, reports);
+                store.dispatch(ActionTypes.REPORT_SET_LIST, mergedReports);
 
                 // Cache reports
-                localStorageService.setReportsCache(reports, userId);
+                localStorageService.setReportsCache(mergedReports, userId);
 
                 // Update HB trends if available
-                this.updateHBTrends(response.data.hb_trends || reports);
+                this.updateHBTrends(response.data.hb_trends || mergedReports);
 
-                Logger.info(`✅ Loaded ${reports.length} reports`);
+                Logger.info(`✅ Loaded ${mergedReports.length} reports`);
             } else {
                 Logger.warn('⚠️ Reports API returned empty or invalid data');
             }
 
         } catch (error) {
+            const userId = store.getState()?.user?.profile?.id || 'global';
+            const cachedReports = await localStorageService.getReportsCache(userId);
+            if (cachedReports && Array.isArray(cachedReports) && cachedReports.length > 0) {
+                Logger.warn('⚠️ Backend reports gagal, menggunakan cache lokal terakhir.', error);
+                store.dispatch(ActionTypes.REPORT_SET_LIST, cachedReports);
+                this.updateHBTrends(cachedReports);
+                return;
+            }
             Logger.error('❌ Failed to load reports:', error);
             throw error;
         }
@@ -120,11 +159,13 @@ export const DashboardController = {
             const response = await UserAPI.getProfile();
 
             if (response && response.success && response.data) {
+                const currentProfile = store.getState()?.user?.profile || {};
+                const mergedProfile = mergeProfileWithLocalState(response.data, currentProfile);
                 // Update state
-                store.dispatch(ActionTypes.USER_SET_PROFILE, response.data);
+                store.dispatch(ActionTypes.USER_SET_PROFILE, mergedProfile);
 
                 // Update storage
-                localStorageService.setUserProfile(response.data);
+                localStorageService.setUserProfile(mergedProfile);
 
                 Logger.info('✅ User profile refreshed');
             }
