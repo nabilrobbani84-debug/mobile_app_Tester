@@ -5,9 +5,12 @@
 expo-env.d.ts
 # @end expo-cli
 node_modules/
+backend/.env
 backend/__pycache__/
 backend/uploads/
 backend/data/
+backend/mysql-local/
+backend/mysql-data/
 *.log
 *.err
 *.db
