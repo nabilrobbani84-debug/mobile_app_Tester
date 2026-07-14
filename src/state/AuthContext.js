@@ -12,8 +12,12 @@ import {
     saveAuthToken,
     saveUserData,
     getItem,
-    setItem
+    setItem,
+    removeItem,
+    STORAGE_KEYS
 } from '../utils/helpers/storageHelpers';
+import { Platform } from 'react-native';
+import * as Application from 'expo-application';
 
 // Initial state
 const initialState = {
@@ -115,6 +119,24 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
+        // Check installation time to force login on fresh installs / reinstalls
+        if (Platform.OS !== 'web' && Application.getInstallationTimeAsync) {
+          try {
+            const installTime = await Application.getInstallationTimeAsync();
+            const installTimeStr = installTime.getTime().toString();
+            const storedInstallTime = await getItem('@modiva_install_time');
+
+            if (storedInstallTime !== installTimeStr) {
+              await clearUserSession();
+              await removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
+              await removeItem(STORAGE_KEYS.USER_DATA);
+              await setItem('@modiva_install_time', installTimeStr);
+            }
+          } catch (installErr) {
+            console.warn('Failed to verify installation time:', installErr);
+          }
+        }
+
         // Force session clear on major updates by checking a session version key
         const CURRENT_SESSION_VERSION = '2'; // Bump to force logout for existing users
         const storedSessionVersion = await getItem('@modiva_session_version');

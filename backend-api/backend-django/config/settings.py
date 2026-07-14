@@ -91,7 +91,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME':  'modiva',
+        'NAME':  'depok sehat',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',

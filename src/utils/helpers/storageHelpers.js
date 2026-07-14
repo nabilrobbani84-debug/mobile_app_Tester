@@ -233,7 +233,6 @@ export const updateUserData = async (updates) => {
 export const clearUserSession = async () => {
   return await removeMultiple([
     STORAGE_KEYS.AUTH_TOKEN,
-    STORAGE_KEYS.USER_DATA,
     STORAGE_KEYS.STORE_STATE,
   ]);
 };

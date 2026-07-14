@@ -213,7 +213,8 @@ export class ReportModel {
             verifiedAt: this.verifiedAt,
             rejectionReason: this.rejectionReason,
             createdAt: this.createdAt,
-            updatedAt: this.updatedAt
+            updatedAt: this.updatedAt,
+            timestamp: this.timestamp
         };
     }
     /**

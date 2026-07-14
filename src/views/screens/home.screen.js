@@ -21,7 +21,7 @@ export default function HomeScreen() {
 
   // State for User Data & Reports
   const [user, setUser] = useState(store.getState()?.user?.profile || {});
-  // Ambil 5 report terakhir untuk di home
+  // Ambil maksimal 5 report untuk di home agar terlihat rapih
   const [reports, setReports] = useState((store.getState()?.reports?.list || []).slice(0, 5));
   const [mySchool, setMySchool] = useState(null);
 
@@ -34,7 +34,7 @@ export default function HomeScreen() {
              setUser(state.user.profile);
           }
           if (state.reports && state.reports.list) {
-             // Urutkan terbaru -> terlama, ambil 5
+             // Urutkan terbaru -> terlama, tampilkan maksimal 5
              const sortedReports = [...state.reports.list].sort((a,b) => b.timestamp - a.timestamp);
              setReports(sortedReports.slice(0, 5));
           }
@@ -143,7 +143,11 @@ export default function HomeScreen() {
   );
 
   // Helper values with defaults from user profile
-  const consumptionCount = Number(user.consumptionCount ?? user.consumption_count ?? 0);
+  const completedHistoryCount = (store.getState()?.reports?.list || []).filter(r => 
+    r.status_konsumsi === 'sudah' || r.status === 'Selesai' || r.status === 'Terkirim'
+  ).length;
+  // Total konsumsi disesuaikan HANYA dengan total riwayat yang valid
+  const consumptionCount = completedHistoryCount;
   const totalTarget = Number(user.totalTarget ?? user.total_target ?? 0);
   const hbValue = user.hbLast ?? user.hb ?? null; // Support both naming conventions
   
@@ -164,8 +168,18 @@ export default function HomeScreen() {
   const displayHBValue = (rawHBValue && rawHBValue !== 0) ? rawHBValue : '-';
 
   // Cek Status Hari Ini
-  const todayStr = new Date().toDateString();
-  const hasConsumedToday = reports.length > 0 && new Date(reports[0].date || reports[0].timestamp).toDateString() === todayStr;
+  const { toLocalDateString } = require('../../utils/helpers/dateHelpers');
+  const localTodayStr = toLocalDateString(new Date());
+  
+  const isStatusDone = (r) => {
+    const s = String(r.status || '').toLowerCase();
+    const sk = String(r.status_konsumsi || '').toLowerCase();
+    return s === 'selesai' || sk === 'sudah' || s === 'terkirim';
+  };
+
+  const hasConsumedToday = (store.getState()?.reports?.list || []).some(r => 
+    isStatusDone(r) && toLocalDateString(r.date || r.timestamp) === localTodayStr
+  );
 
   return (
     <View style={styles.container}>
@@ -223,8 +237,18 @@ export default function HomeScreen() {
 
         {/* Quick Report Button */}
         <TouchableOpacity 
-            style={styles.reportButton} 
-            onPress={() => router.push('/report-form')}
+            style={[styles.reportButton, hasConsumedToday && { opacity: 0.6 }]} 
+            onPress={() => {
+              if (hasConsumedToday) {
+                const { Alert } = require('react-native');
+                Alert.alert(
+                  'Sudah Melaporkan',
+                  'Anda sudah mengirimkan laporan konsumsi untuk hari ini.'
+                );
+                return;
+              }
+              router.push('/report-form');
+            }}
         >
           <Ionicons name="add-circle-outline" size={28} color="white" />
           <Text style={styles.reportButtonText}>Isi Laporan Konsumsi</Text>
@@ -294,13 +318,20 @@ export default function HomeScreen() {
 
         {/* Recent History */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Riwayat Konsumsi Terbaru</Text>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Riwayat Konsumsi Terbaru</Text>
+            <TouchableOpacity onPress={() => router.push('/laporan')}>
+              <Text style={{ color: '#2563eb', fontSize: 14, fontWeight: '500' }}>Lihat Semua</Text>
+            </TouchableOpacity>
+          </View>
           
           {reports.length === 0 ? (
              <Text style={{color: '#9ca3af', fontStyle: 'italic', marginTop: 10}}>Belum ada riwayat.</Text>
           ) : (
-              reports.map((item, index) => (
-                <View key={item.id || index} style={styles.historyItem}>
+              reports.map((item, index) => {
+                const isDone = isStatusDone(item);
+                return (
+                <View key={item.id || index} style={[styles.historyItem, index === reports.length - 1 && { borderBottomWidth: 0 }]}>
                   <View>
                     <Text style={styles.historyDate}>
                         {(() => {
@@ -347,14 +378,18 @@ export default function HomeScreen() {
                     ) : (
                         <Text style={styles.historyHb}>Konsumsi Vitamin</Text>
                     )}
+                    {item.notes ? (
+                        <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4, fontStyle: 'italic' }}>Catatan: {item.notes}</Text>
+                    ) : null}
                   </View>
-                  <View style={[styles.badge, { backgroundColor: item.status === 'Selesai' ? '#dcfce7' : '#fef9c3' }]}>
-                    <Text style={[styles.badgeText, { color: item.status === 'Selesai' ? '#16a34a' : '#854d0e' }]}>
-                        {item.status || 'Selesai'}
+                  <View style={[styles.badge, { backgroundColor: isDone ? '#dcfce7' : '#fef9c3' }]}>
+                    <Text style={[styles.badgeText, { color: isDone ? '#16a34a' : '#854d0e' }]}>
+                        {isDone ? 'Sudah' : 'Belum'}
                     </Text>
                   </View>
                 </View>
-              ))
+                );
+              })
           )}
         </View>
 

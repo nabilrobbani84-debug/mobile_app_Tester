@@ -32,12 +32,13 @@ export default function Index() {
     // 2. Animasi splash sudah selesai (splashAnimationFinished)
     // 3. Status onboarding sudah dicek (onboardingChecked)
     if (!isLoading && splashAnimationFinished && onboardingChecked) {
-      if (!hasOnboardingCompleted) {
-        // Jika belum menyelesaikan tutorial/onboarding, arahkan ke onboarding
-        router.replace('/onboarding');
-      } else if (isAuthenticated) {
-        // Jika sudah login, masuk ke area Tabs/Home
-        router.replace('/(tabs)');
+      if (isAuthenticated) {
+        // Jika sudah login, masuk ke area Tabs/Home jika onboarding sudah selesai
+        if (!hasOnboardingCompleted) {
+          router.replace('/onboarding');
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         // Jika belum login, masuk ke halaman Login
         router.replace('/login');

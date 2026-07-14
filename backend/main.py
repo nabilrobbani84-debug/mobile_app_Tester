@@ -1257,7 +1257,7 @@ def login_siswa(payload: dict[str, Any], request: Request) -> dict[str, Any]:
     user = fetch_one(
         """
         SELECT * FROM users
-        WHERE nisn = %s AND (UPPER(school_code) = %s OR school_id = %s)
+        WHERE TRIM(nisn) = %s AND (TRIM(UPPER(school_code)) = %s OR TRIM(UPPER(school_id)) = %s)
         LIMIT 1
         """,
         (submitted_nisn, submitted_school, submitted_school),
@@ -1695,11 +1695,24 @@ async def submit_ttd_backend_modiva(
                     assignments.append(f"{column} = %s")
                     values.append(value)
             if assignments:
+                base_values = list(values)
                 values.extend([distribusi_id, user["nisn"]])
-                execute_write(
+                affected = execute_write(
                     f"UPDATE distribusi_siswa SET {', '.join(assignments)} WHERE id = %s AND nis = %s",
                     tuple(values),
                 )
+                if affected == 0:
+                    fallback_row = fetch_one(
+                        "SELECT id FROM distribusi_siswa WHERE nis = %s ORDER BY CASE WHEN status_konsumsi = 'belum' THEN 0 ELSE 1 END, id DESC LIMIT 1",
+                        (user["nisn"],)
+                    )
+                    if fallback_row:
+                        actual_dist_id = fallback_row["id"]
+                        fallback_values = base_values + [actual_dist_id, user["nisn"]]
+                        execute_write(
+                            f"UPDATE distribusi_siswa SET {', '.join(assignments)} WHERE id = %s AND nis = %s",
+                            tuple(fallback_values),
+                        )
     except Exception:
         await remove_uploaded_file_if_unused(stored_filename)
         raise

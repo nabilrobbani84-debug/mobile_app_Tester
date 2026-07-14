@@ -15,6 +15,47 @@ import {
     isRecoverableNetworkError
 } from './mock.database.js';
 
+const parseLocalDateOrDateTime = (val) => {
+    if (!val) return null;
+    if (typeof val === 'number') return new Date(val);
+    if (typeof val === 'string') {
+        let normalized = val.trim();
+        // Handle "YYYY-MM-DD HH:mm:ss" format returned by backend
+        if (normalized.includes(' ') && !normalized.includes('T')) {
+            normalized = normalized.replace(' ', 'T');
+        }
+        const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dateOnlyMatch) {
+            const [, year, month, day] = dateOnlyMatch;
+            return new Date(Number(year), Number(month) - 1, Number(day));
+        }
+        const parsedDate = new Date(normalized);
+        if (!isNaN(parsedDate.getTime())) return parsedDate;
+    }
+    return new Date(val);
+};
+
+const getBestTimestamp = (item) => {
+    // Array of fields to check, ordered by preference of having time
+    const fields = [item.created_at, item.updated_at, item.tgl_terima, item.timestamp, item.waktu_minum, item.tanggal_konsumsi];
+    let bestParsed = null;
+    
+    for (const val of fields) {
+        if (!val) continue;
+        const parsed = parseLocalDateOrDateTime(val);
+        if (parsed && !isNaN(parsed.getTime())) {
+            // If it has hours or minutes, it's a good timestamp
+            if (parsed.getHours() > 0 || parsed.getMinutes() > 0 || parsed.getSeconds() > 0) {
+                return parsed.getTime();
+            }
+            if (!bestParsed) {
+                bestParsed = parsed;
+            }
+        }
+    }
+    return bestParsed ? bestParsed.getTime() : Date.now();
+};
+
 const normalizeRiwayatItem = (item = {}) => ({
     id: item.id,
     distribusiId: item.distribusi_id || item.id,
@@ -28,9 +69,9 @@ const normalizeRiwayatItem = (item = {}) => ({
     photoUrl: item.bukti_foto || item.photo_url || item.photoUrl || null,
     photo_url: item.bukti_foto || item.photo_url || item.photoUrl || null,
     notes: item.keterangan || item.notes || '',
-    created_at: item.created_at || item.tgl_terima || item.waktu_minum || item.tanggal_konsumsi || null,
+    created_at: item.created_at || item.updated_at || item.tgl_terima || item.waktu_minum || item.tanggal_konsumsi || null,
     updated_at: item.updated_at || null,
-    timestamp: new Date(item.timestamp || item.created_at || item.tgl_terima || item.waktu_minum || item.tanggal_konsumsi || Date.now()).getTime()
+    timestamp: getBestTimestamp(item)
 });
 /**
  * Mock Report API
@@ -146,9 +187,7 @@ export const ReportAPI = {
             };
         } catch (error) {
             Logger.error('❌ ReportAPI.submit gagal kirim ke backend. Data tidak disimpan ke database.', error);
-            const uploadError = error instanceof Error ? error : new Error(error?.message || 'Gagal mengirim laporan ke server.');
-            uploadError.message = uploadError.message || 'Gagal mengirim laporan ke server.';
-            throw uploadError;
+            throw error;
         }
     },
     /**

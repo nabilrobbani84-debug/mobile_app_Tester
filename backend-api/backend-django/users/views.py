@@ -16,14 +16,18 @@ def login_siswa(request):
     nis = request.data.get('nis')
     kode_sekolah = request.data.get('kode_sekolah')
 
+    # Ensure clean inputs
+    clean_nis = str(nis or '').strip()
+    clean_kode = str(kode_sekolah or '').strip().upper()
+
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT s.id, s.nis, s.nama, sk.kode, sk.nama
                 FROM siswa s
                 JOIN sekolah sk ON s.sekolah_id = sk.id
-                WHERE s.nis = %s AND sk.kode = %s
-            """, [nis, kode_sekolah])
+                WHERE TRIM(s.nis) = %s AND (TRIM(UPPER(sk.kode)) = %s OR TRIM(UPPER(sk.nama)) = %s)
+            """, [clean_nis, clean_kode, clean_kode])
 
             user = cursor.fetchone()
 

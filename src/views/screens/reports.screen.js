@@ -88,8 +88,8 @@ const getDetailedDateString = (dateVal, timestampVal) => {
   
   const hours = String(dateObj.getHours()).padStart(2, '0');
   const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-  const timeStr = `${hours}:${minutes} WIB`;
   
+  const timeStr = `${hours}:${minutes} WIB`;
   return `${dayName}, ${formattedDate} - ${timeStr}`;
 };
 
@@ -412,12 +412,14 @@ const ReportsScreen = () => {
                     <Text style={styles.historyDate}>
                         {getDetailedDateString(report.date, report.timestamp || report.createdAt || report.created_at)}
                     </Text>
-                    {/* Jika ada nilai HB di report, tampilkan. Jika tidak, hide atau tampilkan default */}
                     {(report.hb || report.hbValue || report.hb_value) ? (
                         <Text style={styles.historyHb}>Nilai HB: {report.hb || report.hbValue || report.hb_value} g/dL</Text>
                     ) : (
                         <Text style={styles.historyHb}>Konsumsi Vitamin</Text>
                     )}
+                    {report.notes ? (
+                        <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4, fontStyle: 'italic' }}>Catatan: {report.notes}</Text>
+                    ) : null}
                   </View>
                   <View style={[styles.badge, { backgroundColor: isDone ? '#dcfce7' : '#fef9c3' }]}>
                     <Text style={[styles.badgeText, { color: isDone ? '#16a34a' : '#854d0e' }]}>

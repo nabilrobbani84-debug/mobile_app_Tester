@@ -34,6 +34,24 @@ export default function ReportFormScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const { store } = require('../../state/store');
+    const { toLocalDateString } = require('../../utils/helpers/dateHelpers');
+    const reportsList = store.getState()?.reports?.list || [];
+    const localTodayStr = toLocalDateString(new Date());
+    const alreadyConsumed = reportsList.some(r => 
+      (r.status_konsumsi === 'sudah' || r.status === 'Selesai' || r.status === 'Terkirim') && 
+      toLocalDateString(r.date || r.timestamp) === localTodayStr
+    );
+    if (alreadyConsumed) {
+      Alert.alert(
+        'Sudah Melaporkan',
+        'Anda sudah mengirimkan laporan konsumsi untuk hari ini.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
       ReportController.saveReportDraft({
         date: formatDateValue(date),
@@ -148,11 +166,30 @@ export default function ReportFormScreen() {
     setIsSubmitting(true);
 
     try {
+      const { store } = require('../../state/store');
+      const { DashboardController } = require('../../controllers/dashboard.controller');
+
+      const formattedDate = formatDateValue(date);
+      const reportsList = store.getState()?.reports?.list || [];
+      const matchingReport = reportsList.find(r => 
+        r.date === formattedDate && 
+        (r.status_konsumsi === 'belum' || r.status === 'Belum' || r.status_konsumsi === 'Belum')
+      ) || reportsList.find(r => 
+        (r.status_konsumsi === 'belum' || r.status === 'Belum' || r.status_konsumsi === 'Belum')
+      );
+
+      const distribId = matchingReport?.distribusiId || matchingReport?.id || null;
+
       await ReportController.submitReport({
-        date: formatDateValue(date),
+        date: formattedDate,
         notes: notes.trim(),
         photo: image,
+        distribusiId: distribId,
       });
+
+      // Refresh data
+      ReportController.loadReports().catch(err => console.log('Err loadReports:', err));
+      DashboardController.loadDashboardData().catch(err => console.log('Err loadDashboard:', err));
 
       ReportController.clearReportDraft();
       setErrors({});

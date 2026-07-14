@@ -346,8 +346,9 @@ export class LocalStorageService extends StorageService {
      */
     clearAppData() {
         this.removeAuthToken();
-        this.removeUserProfile();
-        this.clearReportsCache();
+        // Keep user profile and reports cache for history and total consumption visibility after logout
+        // this.removeUserProfile();
+        // this.clearReportsCache();
         this.clearNotificationsCache();
         this.clearOfflineQueue();
         this.clearFormDraft(StorageKeys.forms.reportDraft);

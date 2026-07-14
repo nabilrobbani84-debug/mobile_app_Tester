@@ -25,8 +25,29 @@ const mergeReportsByRecency = (primaryReports = [], secondaryReports = [], userI
         const reportKey = String(normalized.id || fallbackKey);
         const existing = mergedMap.get(reportKey);
 
-        if (!existing || (normalized.timestamp || 0) >= (existing.timestamp || 0)) {
+        if (!existing) {
             mergedMap.set(reportKey, normalized);
+        } else {
+            const existingIsDone = existing.status === 'Selesai' || existing.status_konsumsi === 'sudah';
+            const newIsDone = normalized.status === 'Selesai' || normalized.status_konsumsi === 'sudah';
+            
+            if (existingIsDone && !newIsDone) {
+                // Keep the completed status and details
+                mergedMap.set(reportKey, {
+                    ...normalized,
+                    status: existing.status,
+                    status_konsumsi: existing.status_konsumsi,
+                    tanggal_konsumsi: normalized.tanggal_konsumsi || existing.tanggal_konsumsi,
+                    bukti_foto: normalized.bukti_foto || existing.bukti_foto,
+                    photo: normalized.photo || existing.photo,
+                    photoUrl: normalized.photoUrl || existing.photoUrl,
+                    photo_url: normalized.photo_url || existing.photo_url,
+                    notes: normalized.notes || existing.notes,
+                    timestamp: Math.max(normalized.timestamp || 0, existing.timestamp || 0)
+                });
+            } else if ((normalized.timestamp || 0) >= (existing.timestamp || 0)) {
+                mergedMap.set(reportKey, normalized);
+            }
         }
     });
 

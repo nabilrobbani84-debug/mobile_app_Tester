@@ -32,7 +32,9 @@ def get_riwayat(user=Depends(get_current_user)):
             jumlah,
             status_konsumsi,
             bukti_foto,
-            keterangan
+            keterangan,
+            created_at,
+            updated_at
         FROM distribusi_siswa
         WHERE nis = %s
         ORDER BY tgl_terima DESC
@@ -93,7 +95,9 @@ def detail_riwayat(
             jumlah,
             status_konsumsi,
             bukti_foto,
-            keterangan
+            keterangan,
+            created_at,
+            updated_at
         FROM distribusi_siswa
         WHERE id = %s
         AND nis = %s

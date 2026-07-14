@@ -5,7 +5,7 @@ def get_connection():
         host="127.0.0.1",
         user="root",
         password="",  # sesuaikan
-        database="modiva",
+        database="depok sehat",
         port=3306,
         cursorclass=pymysql.cursors.DictCursor
     )

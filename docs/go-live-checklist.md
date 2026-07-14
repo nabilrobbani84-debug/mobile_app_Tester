@@ -77,7 +77,7 @@ Last updated: 2026-05-16
 | Item | Status | Notes |
 | --- | --- | --- |
 | APK release artifact tersedia | Done | Artifact lama tersedia pada `11/05/2026 18:21:18`. |
-| APK release terbaru berhasil dibuild dari source terbaru | Blocked | Build production env lulus, tetapi build release terbaru belum selesai dan artifact belum berubah dari `11/05/2026 18:21:18`. |
+| APK release terbaru berhasil dibuild dari source terbaru | Done | Build production berhasil diselesaikan pada 11/06/2026. |
 | APK release terbaru terpasang di device uji | Not Started | Belum ada bukti instalasi device pada checklist ini. |
 | APK dapat reach backend production | Blocked | `https://modiva.nurulfikri.id/health` belum resolve saat dicek; APK production belum bisa reach API publik. |
 | Base URL backend final sudah dipastikan | Blocked | `.env.production` sudah mengarah ke `https://modiva.nurulfikri.id/api`, tetapi domain belum resolve. `.env` lokal masih memakai IP private untuk development. |

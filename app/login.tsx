@@ -6,7 +6,7 @@ import LoginScreen from '../src/views/screens/LoginScreen';
 export default function LoginRoute() {
   return (
     <>
-      {/* Mengonfigurasi opsi layar khusus untuk login: sembunyikan header bawaan */}
+      
       <Stack.Screen options={{ headerShown: false }} />
       
       <LoginScreen />

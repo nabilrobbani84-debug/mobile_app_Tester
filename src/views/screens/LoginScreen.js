@@ -22,6 +22,7 @@ import { useNetInfo } from '@react-native-community/netinfo';
 // --- IMPORT AUTH CONTEXT ---
 import { useAuth } from '../../state/AuthContext'; 
 import { AppConfig } from '../../config/app.config';
+import { removeItem, STORAGE_KEYS } from '../../utils/helpers/storageHelpers';
 
 // --- ASET GAMBAR ---
 const LogoImage = require('../../../assets/images/Logo.png'); 
@@ -74,7 +75,9 @@ const LoginScreen = () => {
         schoolCode: normalizedSchoolKey,
       });
       if (response.success) {
-        router.replace('/(tabs)');
+        // Reset onboarding state on successful login so they see the tutorial/step-by-step
+        await removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
+        router.replace('/onboarding');
       } else {
         Alert.alert('Login Gagal', response.error || 'NIS atau Kode Sekolah tidak sesuai.');
       }

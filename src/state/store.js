@@ -221,8 +221,8 @@ class Store {
             case ActionTypes.APP_RESET:
                 this.state = {
                     auth: AuthState.getInitialState(),
-                    user: UserState.getInitialState(),
-                    reports: ReportState.getInitialState(),
+                    user: this.state.user,
+                    reports: this.state.reports,
                     notifications: NotificationState.getInitialState(),
                     ui: UIState.getInitialState()
                 };

@@ -6,6 +6,17 @@ const toNumber = (value) => {
 
 const toTimestamp = (report) => {
   const rawValue = report?.timestamp || report?.createdAt || report?.created_at || report?.date;
+  if (!rawValue) return 0;
+  if (typeof rawValue === 'number') return rawValue;
+  if (typeof rawValue === 'string') {
+    const normalized = rawValue.trim();
+    const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+      return Number.isFinite(localDate.getTime()) ? localDate.getTime() : 0;
+    }
+  }
   const parsed = new Date(rawValue).getTime();
   return Number.isFinite(parsed) ? parsed : 0;
 };

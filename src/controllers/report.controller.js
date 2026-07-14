@@ -28,8 +28,29 @@ const mergeReportsByRecency = (primaryReports = [], secondaryReports = [], userI
         const reportKey = String(normalized.id || fallbackKey);
         const existing = mergedMap.get(reportKey);
 
-        if (!existing || (normalized.timestamp || 0) >= (existing.timestamp || 0)) {
+        if (!existing) {
             mergedMap.set(reportKey, normalized);
+        } else {
+            const existingIsDone = existing.status === 'Selesai' || existing.status_konsumsi === 'sudah';
+            const newIsDone = normalized.status === 'Selesai' || normalized.status_konsumsi === 'sudah';
+            
+            if (existingIsDone && !newIsDone) {
+                // Keep the completed status and details
+                mergedMap.set(reportKey, {
+                    ...normalized,
+                    status: existing.status,
+                    status_konsumsi: existing.status_konsumsi,
+                    tanggal_konsumsi: normalized.tanggal_konsumsi || existing.tanggal_konsumsi,
+                    bukti_foto: normalized.bukti_foto || existing.bukti_foto,
+                    photo: normalized.photo || existing.photo,
+                    photoUrl: normalized.photoUrl || existing.photoUrl,
+                    photo_url: normalized.photo_url || existing.photo_url,
+                    notes: normalized.notes || existing.notes,
+                    timestamp: Math.max(normalized.timestamp || 0, existing.timestamp || 0)
+                });
+            } else if ((normalized.timestamp || 0) >= (existing.timestamp || 0)) {
+                mergedMap.set(reportKey, normalized);
+            }
         }
     });
 
@@ -133,6 +154,8 @@ export const ReportController = {
             const distribusiId = reportData.distribusiId || reportData.distribusi_id || reportData.id || "1";
             formData.append('distribusi_id', String(distribusiId));
             formData.append('tanggal_konsumsi', normalizedDate);
+            formData.append('created_at', submittedAt); // Save exact time of submission
+            formData.append('waktu_minum', submittedAt); // Fallback field for time
             if (compressedImage) {
                 if (compressedImage?.uri) {
                     formData.append('file', {
@@ -160,6 +183,9 @@ export const ReportController = {
             try {
                 response = await ReportAPI.submit(formData);
             } catch (apiError) {
+                if (apiError?.status === 404 || apiError?.status === 401) {
+                    throw apiError;
+                }
                 Logger.warn('⚠️ API submit gagal, menggunakan data lokal sebagai fallback:', apiError);
                 // Buat response tiruan sukses lokal agar UI dapat melanjutkan
                 response = {
@@ -188,9 +214,9 @@ export const ReportController = {
                     notes: normalizedNotes,
                     hbValue: store.getState()?.user?.profile?.hbLast || userProfile?.hbLast || null,
                     status: 'Selesai',
-                    createdAt: responseData.timestamp || responseData.created_at || submittedAt,
-                    updatedAt: responseData.updated_at || responseData.updatedAt || submittedAt,
-                    timestamp: new Date(responseData.timestamp || responseData.created_at || submittedAt).getTime()
+                    createdAt: submittedAt, // Gunakan waktu submit lokal agar jam 00:00 tidak terjadi
+                    updatedAt: submittedAt,
+                    timestamp: new Date(submittedAt).getTime()
                 });
 
                 store.dispatch(ActionTypes.REPORT_UPDATE, {

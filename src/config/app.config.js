@@ -14,7 +14,7 @@ const getConfigValue = (...keys) => {
   // Expo statically injects environment variables, so dynamic access like process.env[key] 
   // will NOT work. We must map them explicitly or use them directly.
   for (const key of keys) {
-    let value;
+    let value ;
     if (key === 'EXPO_PUBLIC_API_URL') value = process.env.EXPO_PUBLIC_API_URL;
     else if (key === 'EXPO_PUBLIC_APP_ENV') value = process.env.EXPO_PUBLIC_APP_ENV;
     else if (key === 'EXPO_PUBLIC_USE_MOCK_API') value = process.env.EXPO_PUBLIC_USE_MOCK_API;

@@ -138,7 +138,8 @@ export const AuthController = {
 
             try {
                 await clearUserSession();
-                await clearReportsCache();
+                // Keep reports cache so history and total consumption are still visible
+                // await clearReportsCache();
                 await clearRememberMe();
             } catch (error) {
                 Logger.warn('⚠️ Failed to clear persisted session during logout:', error);

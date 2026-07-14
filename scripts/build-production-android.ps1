@@ -28,6 +28,13 @@ try {
   Write-Host '[build-production-android] Building Android release APK...'
   Push-Location $androidDir
   try {
+    # Manual clean to avoid CMake autolinking issues during clean phase
+    Write-Host '[build-production-android] Cleaning build directories...'
+    $appBuildDir = Join-Path $androidDir 'app/build'
+    $appCxxDir = Join-Path $androidDir 'app/.cxx'
+    if (Test-Path $appBuildDir) { cmd.exe /c "rmdir /s /q `"$appBuildDir`"" }
+    if (Test-Path $appCxxDir) { cmd.exe /c "rmdir /s /q `"$appCxxDir`"" }
+
     .\gradlew.bat assembleRelease
     if ($LASTEXITCODE -ne 0) {
       throw 'Android release build failed.'

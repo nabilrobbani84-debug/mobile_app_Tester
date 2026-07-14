@@ -18,6 +18,8 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
+import { isOnboardingComplete } from '../src/utils/helpers/storageHelpers';
+
 configureNativeNotificationHandler();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -63,7 +65,7 @@ function AuthNavigationGuard() {
     const isRootRoute = segments.length === 0;
     const isLoginRoute = firstSegment === 'login';
     const isOnboardingRoute = firstSegment === 'onboarding';
-    const isProtectedRoute = !isRootRoute && !isLoginRoute && !isOnboardingRoute;
+    const isProtectedRoute = !isRootRoute && !isLoginRoute;
 
     if (!isAuthenticated && isProtectedRoute) {
       router.replace('/login');
@@ -71,7 +73,15 @@ function AuthNavigationGuard() {
     }
 
     if (isAuthenticated && isLoginRoute) {
-      router.replace('/(tabs)');
+      isOnboardingComplete().then((completed) => {
+        if (!completed) {
+          router.replace('/onboarding');
+        } else {
+          router.replace('/(tabs)');
+        }
+      }).catch(() => {
+        router.replace('/(tabs)');
+      });
     }
   }, [isAuthenticated, isLoading, router, segments]);
 

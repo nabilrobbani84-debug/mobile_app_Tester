@@ -51,12 +51,12 @@ Alasan utama:
 | PB-004 | Sebagai siswa, saya ingin melihat notifikasi pengingat sehingga saya tidak lupa minum vitamin. | Backend + QA | 3 | Review |
 | PB-005 | Sebagai siswa, saya ingin melihat data sekolah sehingga saya tahu profil sekolah saya. | Backend + QA | 3 | Review |
 | PB-006 | Sebagai operator sistem, saya ingin backend tersedia di domain HTTPS publik sehingga APK production bisa dipakai di luar jaringan lokal. | DevOps + Backend | 8 | Blocked |
-| PB-007 | Sebagai QA, saya ingin APK release terbaru dibuild dan diuji di device nyata sehingga rilis tidak memakai artefak lama. | Mobile + QA | 5 | Blocked |
+| PB-007 | Sebagai QA, saya ingin APK release terbaru dibuild dan diuji di device nyata sehingga rilis tidak memakai artefak lama. | Mobile + QA | 5 | In Progress |
 
 ## Sprint Success Criteria
 
 - [ ] Backend production HTTPS aktif dan `/health` sukses.
-- [ ] APK release terbaru dibuild dari source terbaru.
+- [x] APK release terbaru dibuild dari source terbaru.
 - [ ] APK release terbaru terpasang di device Android nyata.
 - [ ] Login valid dan login invalid diuji dari APK release.
 - [ ] Profile get/update dan avatar diuji dari APK release.
@@ -77,7 +77,7 @@ Alasan utama:
 | T-006 | PB-004 | Uji daftar notifikasi, mark as read, mark all, dan delete. | Backend + QA | Done | Dicatat Done di go-live checklist via e2e backend. |
 | T-007 | PB-005 | Uji list/detail/location sekolah dari backend live. | Backend + QA | Done | Dicatat Done di go-live checklist via e2e backend. |
 | T-008 | PB-002 | Perbaiki pesan error koneksi agar jelas bagi user. | Mobile | Review | Perbaikan awal sudah ada; perlu validasi dari APK release. |
-| T-009 | PB-007 | Build ulang APK release setelah seluruh pengujian sprint selesai. | Mobile | Blocked | Build production lulus validasi env, tetapi build release terbaru belum selesai; artefak release masih tanggal 2026-05-11 18:21. |
+| T-009 | PB-007 | Build ulang APK release setelah seluruh pengujian sprint selesai. | Mobile | Done | Build production berhasil diselesaikan pada 11/06/2026. |
 | T-010 | PB-002, PB-003, PB-004, PB-005 | Dokumentasikan hasil uji sprint dan issue terbuka. | QA | In Progress | Go-live checklist sudah ada; perlu bukti device dan UAT. |
 | T-011 | PB-002, PB-003, PB-004, PB-005 | Lengkapi checklist go-live dan gunakan sebagai dasar keputusan rilis. | QA + PO | In Progress | Checklist sudah diperbarui, keputusan masih belum siap rilis. |
 | T-012 | PB-006 | Deploy backend ke domain HTTPS publik. | DevOps + Backend | Blocked | `https://modiva.nurulfikri.id/health` belum resolve saat dicek dari mesin pengembangan. |

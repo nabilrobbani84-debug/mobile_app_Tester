@@ -118,13 +118,15 @@ def update_ttd(
         conn = get_connection()
         cursor = conn.cursor()
 
+        current_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         sql = """
         UPDATE distribusi_siswa
         SET 
             tanggal_konsumsi = %s,
             bukti_foto = %s,
             keterangan = %s,
-            status_konsumsi = 'sudah'
+            status_konsumsi = 'sudah',
+            updated_at = %s
         WHERE id = %s AND nis = %s
         """
 
@@ -132,6 +134,7 @@ def update_ttd(
             tanggal_konsumsi,
             filename,
             keterangan,
+            current_time,
             distribusi_id,
             nis
         ))
@@ -139,10 +142,29 @@ def update_ttd(
         conn.commit()
 
         if cursor.rowcount == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="Data distribusi tidak ditemukan"
+            # Fallback: Cari data distribusi untuk nis ini, utamakan status_konsumsi = 'belum'
+            cursor.execute(
+                "SELECT id FROM distribusi_siswa WHERE nis = %s ORDER BY CASE WHEN status_konsumsi = 'belum' THEN 0 ELSE 1 END, id DESC LIMIT 1",
+                (nis,)
             )
+            row = cursor.fetchone()
+            if row:
+                actual_dist_id = row[0]
+                cursor.execute(sql, (
+                    tanggal_konsumsi,
+                    filename,
+                    keterangan,
+                    current_time,
+                    actual_dist_id,
+                    nis
+                ))
+                conn.commit()
+            
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Data distribusi tidak ditemukan"
+                )
 
     except HTTPException:
         raise
